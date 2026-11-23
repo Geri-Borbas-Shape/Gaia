@@ -45,7 +45,7 @@ Derived values are computed properties in an extension.
 - `sort`, `.distance` at launch
 - `hasFailed`, set when the catalogue cannot be loaded
 
-`CatalogStore` is a `Sendable` struct, so queries are pure functions of the loaded stars.
+`StarRepository` is a `Sendable` struct, so queries are pure functions of the loaded stars.
 
 ## Logging
 
