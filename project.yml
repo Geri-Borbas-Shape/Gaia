@@ -1,0 +1,24 @@
+name: Gaia
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  Gaia:
+    path: Packages/Gaia
+targets:
+  GaiaApp:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: Gaia
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.Gaia
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Gaia
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "6.0"
