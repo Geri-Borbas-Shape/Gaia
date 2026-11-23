@@ -14,7 +14,7 @@ Two screens in one `NavigationStack`: the star list and the star detail.
 
 ### Row
 
-A row shows a colour dot, the title, the G magnitude with 1 decimal, and the distance in light-years with 2 decimals. A star without a magnitude shows "No magnitude". Long titles truncate in the middle.
+A row shows a colour dot, the title, the G magnitude with 2 decimals, and the distance in light-years with 2 decimals. A star without a magnitude shows "No magnitude". Long titles truncate in the middle.
 
 > See [`StarRow.UI`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L70-L75)
 
