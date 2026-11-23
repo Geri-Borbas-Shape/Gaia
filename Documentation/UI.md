@@ -40,10 +40,10 @@ The dot colour approximates the star's colour from its BP−RP colour index.
 
 | Section | Rows |
 |---|---|
-| [Derived](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L10-L14) | Distance, Absolute magnitude, Transverse velocity |
-| [Position](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L15-L20) | Right ascension, Declination, Galactic longitude, Galactic latitude |
-| [Gaia DR3](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L21-L29) | Source ID, Parallax, Proper motion, Magnitude (G), Colour (BP−RP), Temperature, Radial velocity |
+| [Derived](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L10-L15) | Distance, Distance error, Absolute magnitude, Transverse velocity |
+| [Position](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L16-L21) | Right ascension, Declination, Galactic longitude, Galactic latitude |
+| [Gaia DR3](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L22-L30) | Source ID, Parallax, Proper motion, Magnitude (G), Colour (BP−RP), Temperature, Radial velocity |
 
-Values show 2 decimals, positions 4, and the temperature none. A missing value shows as "—".
+Values show 2 decimals, positions and the distance error 4, and the temperature none. A missing value shows as "—".
 
-> See [`StarDetailScreen.row(_:_:unit:digits:)`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L34-L38) and [`StarDetailScreen.UI`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L44-L48)
+> See [`StarDetailScreen.row(_:_:unit:digits:)`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L35-L39) and [`StarDetailScreen.UI`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L44-L48)
