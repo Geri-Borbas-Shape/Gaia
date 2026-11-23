@@ -52,6 +52,11 @@ public extension Star {
         1000 / parallax
     }
 
+    /// One-sigma distance uncertainty from the parallax error.
+    var distanceErrorInParsecs: Double {
+        1000 * parallaxError / (parallax * parallax)
+    }
+
     var distanceInLightYears: Double {
         distanceInParsecs * Self.lightYearsPerParsec
     }

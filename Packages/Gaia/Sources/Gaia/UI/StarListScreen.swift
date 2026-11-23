@@ -26,7 +26,7 @@ public struct StarListScreen: View {
             .searchable(text: $viewModel.searchText, prompt: "Name or Gaia source ID")
             .toolbar {
                 Picker("Sort", selection: $viewModel.sort) {
-                    ForEach(CatalogStore.Sort.allCases) { sort in
+                    ForEach(StarRepository.Sort.allCases) { sort in
                         Text(sort.rawValue).tag(sort)
                     }
                 }
@@ -71,7 +71,7 @@ extension StarRow {
         static let spacing = 12.0
         static let dotSize = 14.0
         static let distanceDigits = 2
-        static let magnitudeDigits = 1
+        static let magnitudeDigits = 2
     }
 }
 

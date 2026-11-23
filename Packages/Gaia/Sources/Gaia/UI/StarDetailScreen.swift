@@ -9,6 +9,7 @@ struct StarDetailScreen: View {
         List {
             Section("Derived") {
                 row("Distance", star.distanceInLightYears, unit: "ly")
+                row("Distance error", star.distanceErrorInParsecs * Star.lightYearsPerParsec, unit: "ly", digits: UI.positionDigits)
                 row("Absolute magnitude", star.absoluteMagnitude)
                 row("Transverse velocity", star.transverseVelocity, unit: "km/s")
             }

@@ -8,10 +8,10 @@ import OSLog
 public final class StarListViewModel {
 
     public var searchText = ""
-    public var sort = CatalogStore.Sort.distance
+    public var sort = StarRepository.Sort.distance
     public private(set) var hasFailed = false
 
-    private var store = CatalogStore()
+    private var store = StarRepository()
 
     public init() {}
 
@@ -21,7 +21,7 @@ public final class StarListViewModel {
 
     public func load() {
         do {
-            store = try CatalogStore.bundled()
+            store = try StarRepository.bundled()
             hasFailed = false
         } catch {
             Logger.catalog.error("Catalogue failed to load: \(error, privacy: .public)")
