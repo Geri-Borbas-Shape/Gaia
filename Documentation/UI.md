@@ -46,4 +46,4 @@ The dot colour approximates the star's colour from its BP−RP colour index.
 
 Values show 2 decimals, positions and the distance error 4, and the temperature none. A missing value shows as "—".
 
-> See [`StarDetailScreen.row(_:_:unit:digits:)`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L35-L39) and [`StarDetailScreen.UI`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L44-L48)
+> See [`StarDetailScreen.row(_:_:unit:digits:)`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L35-L39) and [`StarDetailScreen.UI`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L45-L49)
