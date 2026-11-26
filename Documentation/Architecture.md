@@ -7,7 +7,7 @@ The app is one Swift package, `Gaia`, plus a thin app target that shows the pack
 | Folder | Role | Types |
 |---|---|---|
 | `Model/` | Value types and derived values | `Star` |
-| `Data/` | Parsing, names, queries | `CatalogParser`, `StarNames`, `CatalogStore` |
+| `Data/` | Parsing, names, queries | `CatalogParser`, `StarNames`, `StarRepository` |
 | `UI/` | View model and screens | `StarListViewModel`, `StarListScreen`, `StarRow`, `StarDetailScreen` |
 
 Dependencies point one way: `UI` → `Data` → `Model`.
@@ -15,8 +15,8 @@ Dependencies point one way: `UI` → `Data` → `Model`.
 ## Flow
 
 1. [`StarListScreen`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L4) creates a `StarListViewModel` and calls `load()` in its `.task`.
-2. [`StarListViewModel.load()`](../Packages/Gaia/Sources/Gaia/UI/StarListViewModel.swift#L22-L30) asks for [`CatalogStore.bundled()`](../Packages/Gaia/Sources/Gaia/Data/CatalogStore.swift#L28-L34).
-3. `CatalogStore.bundled()` reads `nearby_stars.csv` from the package bundle and hands the text to [`CatalogParser.stars(from:)`](../Packages/Gaia/Sources/Gaia/Data/CatalogParser.swift#L18-L39).
+2. [`StarListViewModel.load()`](../Packages/Gaia/Sources/Gaia/UI/StarListViewModel.swift#L22-L30) asks for [`StarRepository.bundled()`](../Packages/Gaia/Sources/Gaia/Data/StarRepository.swift#L28-L34).
+3. `StarRepository.bundled()` reads `nearby_stars.csv` from the package bundle and hands the text to [`CatalogParser.stars(from:)`](../Packages/Gaia/Sources/Gaia/Data/CatalogParser.swift#L18-L39).
 4. The list reads [`StarListViewModel.stars`](../Packages/Gaia/Sources/Gaia/UI/StarListViewModel.swift#L18-L20), which queries the store with the current search text and sort order.
 
 ## Model
@@ -30,10 +30,10 @@ Derived values are computed properties in an extension.
 | Property | Formula | Unit |
 |---|---|---|
 | [`distanceInParsecs`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L51-L53) | `1000 / parallax` | pc |
-| [`distanceInLightYears`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L55-L57) | `distanceInParsecs * 3.26156` | ly |
-| [`absoluteMagnitude`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L60-L62) | `magnitude - 5 * (log10(distanceInParsecs) - 1)` | mag |
-| [`totalProperMotion`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L65-L67) | length of the `properMotion` vector | mas/yr |
-| [`transverseVelocity`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L70-L72) | `4.74047 * totalProperMotion / parallax` | km/s |
+| [`distanceInLightYears`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L60-L62) | `distanceInParsecs * 3.26156` | ly |
+| [`absoluteMagnitude`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L65-L67) | `magnitude - 5 * (log10(distanceInParsecs) - 1)` | mag |
+| [`totalProperMotion`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L70-L72) | length of the `properMotion` vector | mas/yr |
+| [`transverseVelocity`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L75-L77) | `4.74047 * totalProperMotion / parallax` | km/s |
 
 `absoluteMagnitude` is `nil` when the source has no G magnitude.
 
@@ -45,7 +45,7 @@ Derived values are computed properties in an extension.
 - `sort`, `.distance` at launch
 - `hasFailed`, set when the catalogue cannot be loaded
 
-`CatalogStore` is a `Sendable` struct, so queries are pure functions of the loaded stars.
+`StarRepository` is a `Sendable` struct, so queries are pure functions of the loaded stars.
 
 ## Logging
 

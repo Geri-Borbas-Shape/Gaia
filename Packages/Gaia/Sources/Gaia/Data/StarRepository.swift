@@ -1,7 +1,7 @@
 import Foundation
 
 /// Holds the parsed catalogue and answers list queries.
-public struct CatalogStore: Sendable {
+public struct StarRepository: Sendable {
 
     public enum Sort: String, CaseIterable, Identifiable, Sendable {
         case distance = "Distance"
@@ -16,7 +16,7 @@ public struct CatalogStore: Sendable {
     }
 
     /// Parsecs.
-    public static let defaultMaximumDistance = 10.0
+    public static let defaultMaximumDistance = 8.0
 
     public let stars: [Star]
 
@@ -25,12 +25,12 @@ public struct CatalogStore: Sendable {
     }
 
     /// Loads `nearby_stars.csv` from the package bundle.
-    public static func bundled() throws -> CatalogStore {
+    public static func bundled() throws -> StarRepository {
         guard let url = Bundle.module.url(forResource: "nearby_stars", withExtension: "csv") else {
             throw LoadError.missingResource
         }
         let csv = try String(contentsOf: url, encoding: .utf8)
-        return CatalogStore(stars: try CatalogParser().stars(from: csv))
+        return StarRepository(stars: try CatalogParser().stars(from: csv))
     }
 
     public func stars(
@@ -47,7 +47,7 @@ public struct CatalogStore: Sendable {
 
 // MARK: - Sorting and search
 
-extension CatalogStore.Sort {
+extension StarRepository.Sort {
 
     var areInIncreasingOrder: (Star, Star) -> Bool {
         switch self {

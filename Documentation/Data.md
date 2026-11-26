@@ -55,22 +55,22 @@ Gaia carries no star names. [`StarNames.bySourceID`](../Packages/Gaia/Sources/Ga
 
 ## Queries
 
-[`CatalogStore.stars(matching:within:sortedBy:)`](../Packages/Gaia/Sources/Gaia/Data/CatalogStore.swift#L36-L45) filters and sorts the loaded stars.
+[`StarRepository.stars(matching:within:sortedBy:)`](../Packages/Gaia/Sources/Gaia/Data/StarRepository.swift#L36-L45) filters and sorts the loaded stars.
 
 | Parameter | Default | Behaviour |
 |---|---|---|
 | `searchText` | `""` | Empty text matches every star |
-| `maximumDistance` | [`defaultMaximumDistance`](../Packages/Gaia/Sources/Gaia/Data/CatalogStore.swift#L19), 10 parsecs | Keeps stars at or within the distance |
+| `maximumDistance` | [`defaultMaximumDistance`](../Packages/Gaia/Sources/Gaia/Data/StarRepository.swift#L19), 8 parsecs | Keeps stars at or within the distance |
 | `sort` | `.distance` | See below |
 
 Search is case-insensitive on the title and also matches any part of the source identifier.
 
-> See [`Star.matches(_:)`](../Packages/Gaia/Sources/Gaia/Data/CatalogStore.swift#L63-L65)
+> See [`Star.matches(_:)`](../Packages/Gaia/Sources/Gaia/Data/StarRepository.swift#L63-L65)
 
-`CatalogStore.Sort` has three cases.
+`StarRepository.Sort` has three cases.
 
 - `.distance`: nearest first
 - `.brightness`: lowest G magnitude first, stars without a magnitude last
 - `.name`: named stars alphabetically, then unnamed stars by source identifier
 
-> See [`CatalogStore.Sort.areInIncreasingOrder`](../Packages/Gaia/Sources/Gaia/Data/CatalogStore.swift#L52-L58)
+> See [`StarRepository.Sort.areInIncreasingOrder`](../Packages/Gaia/Sources/Gaia/Data/StarRepository.swift#L52-L58)
