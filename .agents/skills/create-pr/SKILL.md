@@ -17,7 +17,23 @@ Use `feature/<short-kebab-case-description>` for the branch and `Feature: <concr
 
 Lead with the concrete problem and resulting user-visible behaviour. Keep detail proportional to the change, and describe the final implementation rather than the conversation history.
 
-Include relevant validation. When screenshots or video clips are requested, include the captures in the PR description using stable GitHub URLs and label the behaviour demonstrated by each clip. Update the title and description when the scope changes.
+Include relevant validation. Include requested screenshots and video clips in the PR description, labelled with the behaviour they demonstrate. Update the title and description when the scope changes.
+
+## Video evidence
+
+- Upload actual video files to GitHub's native attachments. Use a GitHub CLI version whose `gh pr create --help` or `gh pr edit --help` lists `--attach`, or GitHub's attachment UI. Prefer H.264 MP4 for playback compatibility.
+- With the CLI, reference each local video as a standalone `![](path/to/clip.mp4)` paragraph in the body file and pass the same path with `--attach`. Repeat the flag for multiple clips. Read back the resulting description to obtain the real uploaded asset URLs.
+- Embed each uploaded video explicitly with `<video src="UPLOADED_GITHUB_ASSET_URL" controls width="320"></video>`, using the actual `https://github.com/user-attachments/assets/...` URL returned by the upload. Replace the temporary Markdown references or bare attachment URLs with these tags before finishing.
+- Do not use GIFs, GIF previews, raw repository URLs, or download links as substitutes for uploaded video players. Preserve ordinary screenshots as images.
+- Verify the saved PR body and GitHub-rendered HTML contain the expected video players and working attachment sources. If native upload is unavailable, report that blocker and keep the recorded files ready; do not silently substitute another format.
+
+Example upload command:
+
+```bash
+gh pr edit "$PR_NUMBER" --body-file "$BODY_FILE" --attach "$VIDEO_PATH"
+```
+
+[GitHub CLI attachment documentation](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli).
 
 ## Publish
 
