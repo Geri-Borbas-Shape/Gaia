@@ -16,6 +16,7 @@ final class StarMapScene: NSObject, MTKViewDelegate {
     private var lastCamera: simd_float4x4?
     private var lastViewport = SIMD2<Float>.zero
     private var lastMarkerSize: Double = 0
+    private var lastVisibleStarCount: Double = 0
     private var lastFieldOfView: Double = 0
     private var reportedCount = -1
     private let root = Entity()
@@ -165,7 +166,8 @@ final class StarMapScene: NSObject, MTKViewDelegate {
         let direction = SIMD3(cos(pitch) * sin(yaw), sin(pitch), cos(pitch) * cos(yaw))
         if let view, let policy = visibilityPolicy {
             let safeDistance = policy.cameraDistance(center: center, direction: direction, requested: orbitDistance,
-                viewport: SIMD2(Float(view.bounds.width), Float(view.bounds.height)), fieldOfView: Float(options.fieldOfView))
+                viewport: SIMD2(Float(view.bounds.width), Float(view.bounds.height)), fieldOfView: Float(options.fieldOfView),
+                targetCount: Int(options.visibleStarCount))
             if safeDistance > orbitDistance {
                 orbitDistance = safeDistance
                 if simd_distance(center, options.focus.center) < 0.01 { targetDistance = max(targetDistance, safeDistance) }
@@ -179,12 +181,14 @@ final class StarMapScene: NSObject, MTKViewDelegate {
         let worldToView = simd_inverse(camera.transform.matrix)
         let viewport = SIMD2(Float(view.bounds.width), Float(view.bounds.height))
         if lastCamera != worldToView || lastViewport != viewport || lastMarkerSize != options.markerSize
-            || lastFieldOfView != options.fieldOfView {
+            || lastFieldOfView != options.fieldOfView || lastVisibleStarCount != options.visibleStarCount {
             visibleFrame = policy.frame(worldToView: worldToView, viewport: viewport,
-                                        fieldOfView: Float(options.fieldOfView), markerSize: Float(options.markerSize))
+                                        fieldOfView: Float(options.fieldOfView), markerSize: Float(options.markerSize),
+                                        targetCount: Int(options.visibleStarCount))
             lastCamera = worldToView
             lastViewport = viewport
             lastMarkerSize = options.markerSize
+            lastVisibleStarCount = options.visibleStarCount
             lastFieldOfView = options.fieldOfView
         }
         starField?.update(markerSize: Float(options.markerSize), viewportHeight: viewport.y, visibility: visibleFrame)

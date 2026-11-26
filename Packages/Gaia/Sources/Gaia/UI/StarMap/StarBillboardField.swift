@@ -58,7 +58,7 @@ final class StarBillboardField {
                 .init(semantic: .uv1, format: .float2, offset: MemoryLayout<Vertex>.offset(of: \.radius)!)
             ],
             vertexLayouts: [.init(bufferIndex: 0, bufferStride: MemoryLayout<Vertex>.stride)],
-            indexCapacity: min(markers.count, StarVisibility.targetCount) * 6
+            indexCapacity: min(markers.count, StarVisibility.maximumCount) * 6
         )
         let mesh = try LowLevelMesh(descriptor: descriptor)
         self.mesh = mesh
@@ -76,7 +76,7 @@ final class StarBillboardField {
         }
         mesh.withUnsafeMutableIndices { bytes in
             let indices = bytes.bindMemory(to: UInt32.self)
-            for index in 0..<min(markers.count, StarVisibility.targetCount) {
+            for index in 0..<min(markers.count, StarVisibility.maximumCount) {
                 for (offset, corner) in [0, 1, 2, 0, 2, 3].enumerated() {
                     indices[index * 6 + offset] = UInt32(index * 4 + corner)
                 }
@@ -93,7 +93,7 @@ final class StarBillboardField {
             upper = simd_max(upper, marker.position + extent)
         }
         meshBounds = BoundingBox(min: lower, max: upper)
-        mesh.parts.replaceAll([.init(indexCount: min(markers.count, StarVisibility.targetCount) * 6, bounds: meshBounds)])
+        mesh.parts.replaceAll([.init(indexCount: min(markers.count, StarVisibility.maximumCount) * 6, bounds: meshBounds)])
         let resource = try MeshResource(from: mesh)
         entity = ModelEntity(mesh: resource, materials: [material])
         entity.name = "Gaia star billboards"

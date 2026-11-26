@@ -9,14 +9,17 @@ struct StarMapControls: View {
         NavigationStack {
             Form {
                 Section {
-                    glowSlider("Glow size", value: $options.glow.size, range: 0.25...4, step: 0.05,
+                    valueSlider("Visible stars", value: $options.visibleStarCount,
+                                range: Double(StarVisibility.minimumCount)...Double(StarVisibility.maximumCount), step: 1,
+                                display: "\(Int(options.visibleStarCount).formatted()) stars")
+                    valueSlider("Glow size", value: $options.glow.size, range: 0.25...4, step: 0.05,
                                display: "\(options.glow.size.formatted(.number.precision(.fractionLength(2))))×")
-                    glowSlider("Glow intensity", value: $options.glow.intensity, range: 0...1, step: 0.01,
+                    valueSlider("Glow intensity", value: $options.glow.intensity, range: 0...1, step: 0.01,
                                display: options.glow.intensity.formatted(.percent.precision(.fractionLength(0))))
-                    glowSlider("Glow bias", value: $options.glow.bias, range: 0.25...4, step: 0.05,
+                    valueSlider("Glow bias", value: $options.glow.bias, range: 0.25...4, step: 0.05,
                                display: options.glow.bias.formatted(.number.precision(.fractionLength(2))))
                 } header: {
-                    Text("Glow")
+                    Text("Stars and glow")
                 } footer: {
                     Text("Changes appear live. Lower bias spreads the glow; higher bias concentrates it.")
                 }
@@ -59,7 +62,7 @@ struct StarMapControls: View {
         }
     }
 
-    private func glowSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>,
+    private func valueSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>,
                             step: Double, display: String) -> some View {
         VStack(spacing: 4) {
             LabeledContent(title, value: display)

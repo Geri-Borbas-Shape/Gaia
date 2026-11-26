@@ -121,8 +121,50 @@ final class StarMapUITests: XCTestCase {
     private func assertVisibleStarBudget(in app: XCUIApplication) {
         let summary = app.staticTexts["map-catalogue-summary"]
         XCTAssertTrue(summary.waitForExistence(timeout: 3))
-        let count = Int(summary.label.split(separator: " ").first ?? "0") ?? 0
+        let count = Int((summary.label.split(separator: " ").first ?? "0").filter(\.isNumber)) ?? 0
         XCTAssertTrue((100...1_000).contains(count), "Unexpected star count: \(summary.label)")
+    }
+
+    func testDensityChangesLiveInBothCameraViewsAndResets() {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.otherElements["star-map"].waitForExistence(timeout: 10))
+        app.buttons["Map controls"].tap()
+        let slider = app.sliders["Visible stars"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 3))
+        captureMarker("live-density", "begin")
+
+        slider.adjust(toNormalizedSliderPosition: 0)
+        let low = assertDensityMatchesSlider(slider, in: app)
+        XCTAssertTrue((100...150).contains(low))
+        attachScreenshot(of: app, named: "Low star density")
+        slider.adjust(toNormalizedSliderPosition: 1)
+        let high = assertDensityMatchesSlider(slider, in: app)
+        XCTAssertTrue((900...1_000).contains(high))
+        attachScreenshot(of: app, named: "Live star density")
+        app.buttons["Done"].tap()
+        app.segmentedControls.buttons["Milky Way"].tap()
+        app.buttons["Map controls"].tap()
+        XCTAssertEqual(assertDensityMatchesSlider(slider, in: app), high)
+        slider.adjust(toNormalizedSliderPosition: 0.35)
+        let middle = assertDensityMatchesSlider(slider, in: app)
+        XCTAssertTrue(middle > low && middle < high)
+        attachScreenshot(of: app, named: "Milky Way density controls")
+        captureMarker("live-density", "end")
+        app.buttons["Done"].tap()
+        app.buttons["Reset view"].tap()
+        app.buttons["Map controls"].tap()
+        XCTAssertEqual(assertDensityMatchesSlider(slider, in: app), 500)
+        app.buttons["Done"].tap()
+    }
+
+    @discardableResult
+    private func assertDensityMatchesSlider(_ slider: XCUIElement, in app: XCUIApplication) -> Int {
+        let selected = Int((slider.value as? String ?? "").filter(\.isNumber)) ?? 0
+        let summary = app.staticTexts["map-catalogue-summary"]
+        let shown = Int((summary.label.split(separator: " ").first ?? "0").filter(\.isNumber)) ?? 0
+        XCTAssertEqual(shown, selected, "The rendered count must change while Map Controls stays open")
+        return selected
     }
 
     func testGlowControlsUpdateTheMapWhileSheetIsOpen() throws {

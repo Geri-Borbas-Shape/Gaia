@@ -25,19 +25,25 @@ struct StarVisibility {
         }
     }
 
-    static let targetCount = 500
+    static let defaultCount = 500
     static let minimumCount = 100
+    static let maximumCount = 1_000
     static let maximumDiameter: Float = 24
     let sources: [Source]
 
+    private static func boundedCount(_ count: Int) -> Int {
+        min(max(count, minimumCount), maximumCount)
+    }
+
     func frame(worldToView: simd_float4x4, viewport: SIMD2<Float>, fieldOfView: Float,
-               markerSize: Float) -> Frame {
+               markerSize: Float, targetCount: Int = Self.defaultCount) -> Frame {
         guard viewport.x > 0, viewport.y > 0 else { return Frame() }
+        let targetCount = Self.boundedCount(targetCount)
         let projectionY = 1 / tan(fieldOfView * .pi / 360)
         let projectionX = projectionY * viewport.y / viewport.x
         let radiusScale = markerSize * StarMapProjection.parsecsPerSolarRadius
         var heap: [Projected] = []
-        heap.reserveCapacity(Self.targetCount)
+        heap.reserveCapacity(targetCount)
         var nextDiameter: Float = 0
 
         // A bounded min-heap avoids sorting the whole catalogue on every camera move.
@@ -51,7 +57,7 @@ struct StarVisibility {
             guard diameter.isFinite, diameter > 0 else { continue }
             let candidate = Projected(index: index, point: (ndc * [1, -1] + 1) * viewport / 2,
                                       diameter: diameter, depth: depth)
-            if heap.count < Self.targetCount {
+            if heap.count < targetCount {
                 heap.append(candidate)
                 var child = heap.count - 1
                 while child > 0 {
@@ -83,11 +89,12 @@ struct StarVisibility {
         return Frame(stars: heap, threshold: threshold, scale: scale)
     }
 
-    /// Back away only if a requested camera would leave fewer than 100 catalogue stars in frame.
+    /// Back away only if a requested camera would leave fewer than the chosen count in frame.
     /// This keeps zooming toward empty Galactic-centre space from losing the nearby sample.
     func cameraDistance(center: SIMD3<Float>, direction: SIMD3<Float>, requested: Float,
-                        viewport: SIMD2<Float>, fieldOfView: Float) -> Float {
-        guard sources.count >= Self.minimumCount, viewport.x > 0, viewport.y > 0 else { return requested }
+                        viewport: SIMD2<Float>, fieldOfView: Float, targetCount: Int = Self.defaultCount) -> Float {
+        let targetCount = min(sources.count, Self.boundedCount(targetCount))
+        guard targetCount > 0, viewport.x > 0, viewport.y > 0 else { return requested }
         let right = simd_normalize(simd_cross(SIMD3<Float>(0, 1, 0), direction))
         let up = simd_cross(direction, right)
         let tangentY = tan(fieldOfView * .pi / 360)
@@ -103,7 +110,7 @@ struct StarVisibility {
                    abs(simd_dot(relative, right)) <= depth * tangentX,
                    abs(simd_dot(relative, up)) <= depth * tangentY {
                     count += 1
-                    if count >= Self.minimumCount { return true }
+                    if count >= targetCount { return true }
                 }
             }
             return false

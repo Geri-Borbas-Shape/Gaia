@@ -33,7 +33,7 @@ final class StarSelectionOverlay: UIView {
         ring.strokeColor = UIColor.white.cgColor
         ring.lineWidth = 1
         layer.addSublayer(ring)
-        name.font = .preferredFont(forTextStyle: .caption1)
+        name.font = UIFontMetrics(forTextStyle: .subheadline).scaledFont(for: .boldSystemFont(ofSize: 15))
         name.textColor = .white
         name.adjustsFontForContentSizeCategory = true
         name.numberOfLines = 2
@@ -44,8 +44,22 @@ final class StarSelectionOverlay: UIView {
         name.layer.shadowRadius = 2
         name.layer.shadowOffset = .zero
         addSubview(name)
-        details.setTitle("Star Data", for: .normal)
-        details.titleLabel?.font = .preferredFont(forTextStyle: .caption1)
+        var button = UIButton.Configuration.plain()
+        button.title = "Star Data"
+        button.image = UIImage(systemName: "arrow.right")
+        button.imagePlacement = .trailing
+        button.imagePadding = 4
+        button.preferredSymbolConfigurationForImage = .init(textStyle: .caption1, scale: .small)
+        button.contentInsets = .zero
+        button.background = .clear()
+        button.baseForegroundColor = .white
+        button.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+            var attributes = attributes
+            attributes.font = .preferredFont(forTextStyle: .caption1)
+            return attributes
+        }
+        details.configuration = button
+        details.accessibilityLabel = "Star Data"
         details.titleLabel?.adjustsFontForContentSizeCategory = true
         details.contentHorizontalAlignment = .leading
         details.contentVerticalAlignment = .top

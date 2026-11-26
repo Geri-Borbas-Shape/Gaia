@@ -29,7 +29,7 @@ final class StarGlowPass: @unchecked Sendable {
     init(stars: [Star], device: any MTLDevice, library: (any MTLLibrary)? = nil) throws {
         self.device = device
         self.library = try library ?? device.makeDefaultLibrary(bundle: .module)
-        visibleIndices = (0..<min(stars.count, StarVisibility.targetCount)).map(UInt32.init)
+        visibleIndices = (0..<min(stars.count, StarVisibility.maximumCount)).map(UInt32.init)
         guard let buffer = stars.withUnsafeBytes({ bytes in
             device.makeBuffer(bytes: bytes.baseAddress!, length: bytes.count, options: .storageModeShared)
         }) else { throw RenderError.bufferUnavailable }
@@ -38,7 +38,7 @@ final class StarGlowPass: @unchecked Sendable {
     }
 
     func setVisibleIndices(_ indices: [Int]) {
-        precondition(indices.count <= StarVisibility.targetCount)
+        precondition(indices.count <= StarVisibility.maximumCount)
         lock.lock()
         defer { lock.unlock() }
         visibleIndices = indices.map(UInt32.init)
@@ -81,7 +81,7 @@ final class StarGlowPass: @unchecked Sendable {
         encoder.setVertexBuffer(stars, offset: 0, index: 0)
         encoder.setVertexBytes(&frame, length: MemoryLayout<Uniforms>.stride, index: 1)
         if !visibleIndices.isEmpty {
-            // At most 500 indices (2 KB), copied by Metal into this frame's command buffer.
+            // At most 1,000 indices (4,000 bytes), copied by Metal into this frame's command buffer.
             visibleIndices.withUnsafeBytes { encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: 2) }
             encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: visibleIndices.count)
         }

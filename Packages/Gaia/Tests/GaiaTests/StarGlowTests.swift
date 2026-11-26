@@ -90,3 +90,10 @@ private let coolGlow = StarGlowPass.Star(positionRadius: [0, 0, -10, 4], color: 
     let empty = try renderGlow([warmGlow, coolGlow], visibleIndices: [])
     #expect(empty == (0..<(64 * 64)).flatMap { _ in [UInt8(80), 120, 160, 255] })
 }
+
+@Test func glowPassSupportsTheFullThousandStarBudget() throws {
+    var stars = Array(repeating: StarGlowPass.Star(positionRadius: [0, 0, -5, 2], color: [0, 0, 0, 1]), count: 1_000)
+    stars[999] = warmGlow
+    let image = try renderGlow(stars, visibleIndices: Array(0..<1_000))
+    #expect(image == (try renderGlow([warmGlow])))
+}

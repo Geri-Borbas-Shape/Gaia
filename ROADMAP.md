@@ -15,10 +15,10 @@ No next feature selected yet. Add your feature requests here.
 ## Completed
 
 - [x] **Keep stars visible and select them before opening details**
-  - Share adaptive visibility between Sun and Milky Way cameras, drawing 100–500 stars.
+  - Share adaptive visibility between Sun and Milky Way cameras, with a live 100–1,000-star density slider.
   - Prefer larger apparent stars and promote distant markers to a visible size.
   - Keep the catalogue in frame at extreme zoom and field of view.
-  - Track a selected star with a circle, name and plain Star Data button.
+  - Track a selected star with a circle, larger bold name and plain Star Data arrow button.
   - Open measurements only after tapping Star Data.
 
 - [x] **Refine star appearance and expand the sample**

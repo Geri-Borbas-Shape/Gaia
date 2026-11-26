@@ -13,14 +13,16 @@ private func cameraMatrix(center: SIMD3<Float>, direction: SIMD3<Float>, distanc
 
 @Test func visibilityPrefersLargeApparentStarsAndHasAHardBudget() {
     let sources = (1...1_500).map { StarVisibility.Source(position: [0, 0, -100], radius: Float($0)) }
-    let frame = StarVisibility(sources: sources).frame(worldToView: matrix_identity_float4x4,
-        viewport: [400, 600], fieldOfView: 50, markerSize: 5)
-    #expect(frame.stars.count == 500)
-    #expect(Set(frame.stars.map(\.index)) == Set(1_000..<1_500))
-    #expect(frame.stars.allSatisfy { frame.displayedDiameter($0) <= StarVisibility.maximumDiameter })
     let equal = Array(repeating: StarVisibility.Source(position: [0, 0, -100], radius: 1), count: 1_500)
-    #expect(StarVisibility(sources: equal).frame(worldToView: matrix_identity_float4x4,
-        viewport: [400, 600], fieldOfView: 50, markerSize: 5).stars.count == 500)
+    for count in [100, 500, 1_000] {
+        let frame = StarVisibility(sources: sources).frame(worldToView: matrix_identity_float4x4,
+            viewport: [400, 600], fieldOfView: 50, markerSize: 5, targetCount: count)
+        #expect(frame.stars.count == count)
+        #expect(Set(frame.stars.map(\.index)) == Set((1_500 - count)..<1_500))
+        #expect(frame.stars.allSatisfy { frame.displayedDiameter($0) <= StarVisibility.maximumDiameter })
+        #expect(StarVisibility(sources: equal).frame(worldToView: matrix_identity_float4x4,
+            viewport: [400, 600], fieldOfView: 50, markerSize: 5, targetCount: count).stars.count == count)
+    }
 }
 
 @Test func visibilityExcludesOffscreenAndBehindCameraStars() {
@@ -40,14 +42,16 @@ private func cameraMatrix(center: SIMD3<Float>, direction: SIMD3<Float>, distanc
         for requested: Float in [0.5, 140, 100_000] {
             for fieldOfView: Float in [10, 80] {
                 for direction in directions {
-                    let viewport = SIMD2<Float>(400, 600)
-                    let distance = policy.cameraDistance(center: center, direction: direction, requested: requested,
-                                                        viewport: viewport, fieldOfView: fieldOfView)
-                    let frame = policy.frame(worldToView: cameraMatrix(center: center, direction: direction, distance: distance),
-                                             viewport: viewport, fieldOfView: fieldOfView, markerSize: 5)
-                    #expect((100...500).contains(frame.stars.count))
-                    #expect(frame.stars.allSatisfy { frame.displayedDiameter($0) >= 1.99 })
-                    #expect(distance >= requested)
+                    for count in [100, 1_000] {
+                        let viewport = SIMD2<Float>(400, 600)
+                        let distance = policy.cameraDistance(center: center, direction: direction, requested: requested,
+                                                            viewport: viewport, fieldOfView: fieldOfView, targetCount: count)
+                        let frame = policy.frame(worldToView: cameraMatrix(center: center, direction: direction, distance: distance),
+                                                 viewport: viewport, fieldOfView: fieldOfView, markerSize: 5, targetCount: count)
+                        #expect(frame.stars.count == count)
+                        #expect(frame.stars.allSatisfy { frame.displayedDiameter($0) >= 1.99 })
+                        #expect(distance >= requested)
+                    }
                 }
             }
         }
