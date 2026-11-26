@@ -22,3 +22,20 @@ targets:
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "6.0"
+  GaiaAppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/GaiaAppUITests]
+    dependencies:
+      - target: GaiaApp
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+schemes:
+  GaiaApp:
+    build:
+      targets:
+        GaiaApp: all
+    test:
+      targets: [GaiaAppUITests]

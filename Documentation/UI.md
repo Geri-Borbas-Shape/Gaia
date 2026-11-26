@@ -1,6 +1,6 @@
 # UI
 
-Two screens in one `NavigationStack`: the star list and the star detail.
+`GaiaScreen` provides a **3D Map** tab and a **Catalogue** tab on iOS. The [3D map](3D.md) opens first and supports orbiting, zooming, Galactic context and star details. The catalogue keeps the star list and star detail in its own `NavigationStack`.
 
 ## Star list
 
