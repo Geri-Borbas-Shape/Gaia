@@ -1,8 +1,9 @@
 #if os(iOS)
 import RealityKit
+import MetalKit
 import SwiftUI
 
-/// A non-AR RealityKit host for the interactive star map.
+/// Metal host for the RealityKit scene followed by screen-blended star glow.
 struct StarMapView: UIViewRepresentable {
     let stars: [Star]
     let options: StarMapOptions
@@ -14,10 +15,12 @@ struct StarMapView: UIViewRepresentable {
         StarMapScene(stars: stars)
     }
 
-    func makeUIView(context: Context) -> ARView {
-        let view = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
-        view.environment.background = .color(.black)
-        view.renderOptions = [.disableMotionBlur, .disableDepthOfField, .disableCameraGrain]
+    func makeUIView(context: Context) -> MTKView {
+        let view = MTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
+        view.colorPixelFormat = .bgra8Unorm_srgb
+        view.clearColor = MTLClearColorMake(0, 0, 0, 1)
+        view.backgroundColor = .black
+        view.preferredFramesPerSecond = 60
         view.isAccessibilityElement = true
         view.accessibilityLabel = "Interactive 3D star map"
         view.accessibilityHint = "Use Map Controls to rotate the view, or the Catalogue tab to browse individual stars."
@@ -25,15 +28,15 @@ struct StarMapView: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: ARView, context: Context) {
+    func updateUIView(_ view: MTKView, context: Context) {
         context.coordinator.onSelect = onSelect
         context.coordinator.update(options: options, reduceMotion: reduceMotion)
         context.coordinator.setActive(isActive)
     }
 
-    static func dismantleUIView(_ view: ARView, coordinator: StarMapScene) {
+    static func dismantleUIView(_ view: MTKView, coordinator: StarMapScene) {
         coordinator.setActive(false)
-        view.scene.anchors.removeAll()
+        view.delegate = nil
     }
 }
 #endif

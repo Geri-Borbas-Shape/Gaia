@@ -2,7 +2,7 @@
 import Metal
 import RealityKit
 
-/// One shared mesh with separate core and halo passes. The shader faces each quad toward the camera.
+/// One batched core mesh plus a separate screen-blended Metal glow pass.
 @MainActor
 final class StarBillboardField {
     struct Marker {
@@ -21,9 +21,8 @@ final class StarBillboardField {
 
     let markers: [Marker]
     let entity: ModelEntity
-    private let glow: ModelEntity
+    let glowPass: StarGlowPass
     private var material: CustomMaterial
-    private var glowMaterial: CustomMaterial
 
     init(stars: [Star]) throws {
         let markers = stars.map { star in
@@ -40,17 +39,12 @@ final class StarBillboardField {
             geometryModifier: .init(named: "starBillboardGeometry", in: library),
             lightingModel: .unlit
         )
-        material.blending = .transparent(opacity: .init(floatLiteral: 1))
+        material.blending = .opaque
         material.faceCulling = .none
         material.writesDepth = true
-        glowMaterial = try CustomMaterial(
-            surfaceShader: .init(named: "starGlowSurface", in: library),
-            geometryModifier: .init(named: "starBillboardGeometry", in: library),
-            lightingModel: .unlit
-        )
-        glowMaterial.blending = .transparent(opacity: .init(floatLiteral: 1))
-        glowMaterial.faceCulling = .none
-        glowMaterial.writesDepth = false
+        glowPass = try StarGlowPass(stars: markers.map {
+            .init(positionRadius: SIMD4($0.position, $0.radius), color: SIMD4($0.color, 1))
+        }, device: device, library: library)
 
         let descriptor = LowLevelMesh.Descriptor(
             vertexCapacity: markers.count * 4,
@@ -85,7 +79,7 @@ final class StarBillboardField {
             }
         }
         // Geometry modifiers can extend beyond the stored point positions. Include the maximum
-        // slider radius and glow in the mesh bounds so RealityKit does not cull visible halos.
+        // slider size and quad extent in the mesh bounds so RealityKit does not cull visible cores.
         var lower = SIMD3<Float>(repeating: .infinity)
         var upper = SIMD3<Float>(repeating: -.infinity)
         for marker in markers {
@@ -97,11 +91,6 @@ final class StarBillboardField {
         mesh.parts.replaceAll([.init(indexCount: markers.count * 6, bounds: BoundingBox(min: lower, max: upper))])
         let resource = try MeshResource(from: mesh)
         entity = ModelEntity(mesh: resource, materials: [material])
-        glow = ModelEntity(mesh: resource, materials: [glowMaterial])
-        let ordering = ModelSortGroup()
-        entity.components.set(ModelSortGroupComponent(group: ordering, order: 0))
-        glow.components.set(ModelSortGroupComponent(group: ordering, order: 1))
-        entity.addChild(glow)
         entity.name = "Gaia star billboards"
     }
 
@@ -110,9 +99,7 @@ final class StarBillboardField {
                              StarMapProjection.minimumDiameter, StarMapProjection.glowExtent)
         guard material.custom.value != uniforms else { return }
         material.custom.value = uniforms
-        glowMaterial.custom.value = uniforms
         entity.model?.materials = [material]
-        glow.model?.materials = [glowMaterial]
     }
 
     private enum RenderError: Error { case noMetalDevice }

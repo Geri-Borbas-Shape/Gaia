@@ -1,20 +1,21 @@
 #if os(iOS)
-import Combine
+import MetalKit
 import RealityKit
 import SwiftUI
 import OSLog
 
 /// Camera and selection around a GPU-rendered field of star billboards.
 @MainActor
-final class StarMapScene: NSObject {
+final class StarMapScene: NSObject, MTKViewDelegate {
 
-    private weak var view: ARView?
-    private let root = AnchorEntity(world: .zero)
+    private weak var view: MTKView?
+    private let root = Entity()
     private let camera = PerspectiveCamera()
     private let milkyWay = Entity()
     private var starField: StarBillboardField?
     private var renderingFailed = false
-    private var subscription: Cancellable?
+    private var renderer: StarSceneRenderer?
+    private var previousFrameTime: TimeInterval?
     private var options = StarMapOptions()
     private var center = SIMD3<Float>.zero
     private var orbitDistance = StarMapOptions.Focus.sun.distance
@@ -51,9 +52,16 @@ final class StarMapScene: NSObject {
         positionCamera()
     }
 
-    func attach(to view: ARView) {
+    func attach(to view: MTKView) {
         self.view = view
-        view.scene.addAnchor(root)
+        view.delegate = self
+        do {
+            guard let device = view.device else { throw CocoaError(.featureUnsupported) }
+            renderer = try StarSceneRenderer(root: root, camera: camera, device: device)
+        } catch {
+            renderingFailed = true
+            Logger.catalog.error("Star renderer failed: \(error, privacy: .public)")
+        }
         if renderingFailed {
             let message = UILabel()
             message.text = "Star rendering unavailable"
@@ -97,18 +105,41 @@ final class StarMapScene: NSObject {
     }
 
     func setActive(_ active: Bool) {
-        guard let view else { return }
-        if active, subscription == nil {
-            subscription = view.scene.subscribe(to: SceneEvents.Update.self) { [weak self] event in
-                // RealityKit delivers scene updates on the main thread.
-                MainActor.assumeIsolated {
-                    self?.tick(deltaTime: Float(event.deltaTime))
-                }
-            }
-        } else if !active {
-            subscription?.cancel()
-            subscription = nil
+        view?.isPaused = !active || renderingFailed
+        if !active { previousFrameTime = nil }
+    }
+
+    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+
+    func draw(in view: MTKView) {
+        guard view.bounds.height > 0, view.bounds.width > 0, let starField else { return }
+        let time = CACurrentMediaTime()
+        let delta = min(time - (previousFrameTime ?? time), 0.1)
+        previousFrameTime = time
+        tick(deltaTime: Float(delta))
+        do {
+            try renderer?.render(in: view, deltaTime: delta, glow: starField.glowPass, projection: projectionMatrix)
+        } catch {
+            renderingFailed = true
+            view.isPaused = true
+            Logger.catalog.error("Star frame failed: \(error, privacy: .public)")
         }
+    }
+
+    private var projectionMatrix: simd_float4x4 {
+        let aspect = Float((view?.bounds.width ?? 1) / max(view?.bounds.height ?? 1, 1))
+        let y = 1 / tan(Float(options.fieldOfView) * .pi / 360)
+        let near = camera.camera.near, far = camera.camera.far
+        return simd_float4x4([y / aspect, 0, 0, 0], [0, y, 0, 0],
+                            [0, 0, far / (near - far), -1], [0, 0, near * far / (near - far), 0])
+    }
+
+    private func project(_ position: SIMD3<Float>) -> CGPoint? {
+        guard let view else { return nil }
+        let clip = projectionMatrix * simd_inverse(camera.transform.matrix) * SIMD4(position, 1)
+        guard clip.w > 0 else { return nil }
+        return CGPoint(x: CGFloat(clip.x / clip.w + 1) * view.bounds.width / 2,
+                       y: CGFloat(1 - clip.y / clip.w) * view.bounds.height / 2)
     }
 
     private func tick(deltaTime: Float) {
@@ -127,6 +158,8 @@ final class StarMapScene: NSObject {
     private func updateMarkers() {
         guard let view, view.bounds.height > 0 else { return }
         starField?.update(markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height))
+        starField?.glowPass.update(worldToView: simd_inverse(camera.transform.matrix),
+                                  markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height))
     }
 
     @objc private func orbit(_ gesture: UIPanGestureRecognizer) {
@@ -155,7 +188,7 @@ final class StarMapScene: NSObject {
                 depth: depth, fieldOfView: Float(options.fieldOfView), viewportHeight: Float(view.bounds.height)
             )
             guard depth > camera.camera.near, diameter >= StarMapProjection.minimumDiameter,
-                  let point = view.project(marker.position), view.bounds.contains(point) else { return nil }
+                  let point = project(marker.position), view.bounds.contains(point) else { return nil }
             let distance = hypot(point.x - tap.x, point.y - tap.y)
             return distance <= max(12, CGFloat(diameter) / 2) ? (star, distance) : nil
         }.min { $0.1 < $1.1 }
