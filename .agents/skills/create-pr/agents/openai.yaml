@@ -1,0 +1,7 @@
+interface:
+  display_name: "create-PR"
+  short_description: "Create PRs with the repository's naming conventions"
+  default_prompt: "Use $create-pr to prepare and open a PR for the completed change."
+
+policy:
+  allow_implicit_invocation: true
