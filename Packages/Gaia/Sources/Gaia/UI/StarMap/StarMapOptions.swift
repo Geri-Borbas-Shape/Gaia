@@ -17,7 +17,7 @@ struct StarMapOptions: Equatable {
 
         var distance: Float {
             switch self {
-            case .sun: 45
+            case .sun: 140
             case .galacticCenter: 55_000
             }
         }
@@ -26,7 +26,6 @@ struct StarMapOptions: Equatable {
     var focus = Focus.sun
     var fieldOfView = 50.0
     var markerSize = 5.0
-    var constantScreenSize = true
     var showsMilkyWay = true
     var resetID = 0
     var horizontalOrbit = 0
@@ -40,6 +39,21 @@ struct StarMapOptions: Equatable {
 }
 
 enum StarMapProjection {
+
+    /// Shared with StarGlow.metal through custom uniforms. All stars use the same exaggeration.
+    static let parsecsPerSolarRadius: Float = 0.0125
+    static let minimumDiameter: Float = 0.75
+    static let glowExtent: Float = 3
+
+    static func worldRadius(solarRadius: Float, markerSize: Float) -> Float {
+        solarRadius * markerSize * parsecsPerSolarRadius
+    }
+
+    static func projectedDiameter(radius: Float, depth: Float, fieldOfView: Float, viewportHeight: Float) -> Float {
+        guard radius.isFinite, radius > 0, depth.isFinite, depth > 0,
+              viewportHeight > 0, fieldOfView > 0, fieldOfView < 180 else { return 0 }
+        return radius * viewportHeight / (depth * tan(fieldOfView * .pi / 360))
+    }
 
     /// Radius of a unit sphere for a requested diameter in screen points, using camera-space depth.
     static func markerRadius(diameter: Float, depth: Float, fieldOfView: Float, viewportHeight: Float) -> Float {

@@ -19,13 +19,13 @@ struct StarMapScreen: View {
                     ContentUnavailableView {
                         Label("Catalogue unavailable", systemImage: "sparkles")
                     } actions: {
-                        Button("Retry") { catalogue.load() }
+                        Button("Retry") { Task { await catalogue.load() } }
                     }
-                } else if catalogue.stars.isEmpty {
+                } else if catalogue.allStars.isEmpty {
                     ProgressView("Loading stars")
                 } else {
                     StarMapView(
-                        stars: catalogue.stars,
+                        stars: catalogue.allStars,
                         options: options,
                         isActive: isVisible && scenePhase == .active && selectedStar == nil,
                         reduceMotion: reduceMotion,
@@ -43,10 +43,11 @@ struct StarMapScreen: View {
                     }
                     .pickerStyle(.segmented)
                     Text(options.focus == .sun
-                         ? "\(catalogue.stars.count) stars within 10 pc · Sun at the centre"
-                         : "Nearby stars cluster around the Sun at this scale")
+                         ? "\(catalogue.allStars.count.formatted()) stars within \(catalogue.catalogueRadius) pc · Sun at the centre"
+                         : "Zoom in to resolve individual stars")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("map-catalogue-summary")
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 12)
@@ -54,11 +55,13 @@ struct StarMapScreen: View {
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(spacing: 6) {
-                    Label("Sun", systemImage: "circle.fill")
-                        .foregroundStyle(.yellow)
+                    HStack(spacing: 16) {
+                        Label("Cool", systemImage: "circle.fill").foregroundStyle(.orange)
+                        Label("Hot", systemImage: "circle.fill").foregroundStyle(.cyan)
+                    }
                     Text("Drag to orbit · Pinch to zoom · Tap a star")
                         .foregroundStyle(.secondary)
-                    Text("Marker sizes are exaggerated")
+                    Text("Sizes exaggerated · Zoom reveals smaller stars")
                         .foregroundStyle(.tertiary)
                 }
                 .font(.caption)
@@ -83,7 +86,7 @@ struct StarMapScreen: View {
             .sheet(item: $selectedStar) { star in
                 StarMapDetail(star: star)
             }
-            .task { catalogue.load() }
+            .task { await catalogue.load() }
             .onAppear { isVisible = true }
             .onDisappear { isVisible = false }
         }

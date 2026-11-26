@@ -14,6 +14,13 @@ No next feature selected yet. Add your feature requests here.
 
 ## Completed
 
+- [x] **Refine star appearance and expand the sample**
+  - Radius-scaled markers with temperature colours and labelled estimates.
+  - Hide unresolved stars until zoom makes them visible.
+  - Expand to 51,983 Gaia DR3 sources within 50 pc.
+  - Batch camera-facing stars with a dedicated Metal glow shader.
+  - Keep the Milky Way grid in both focus modes.
+
 - [x] **3D star map adapted from Stars**
   - Plot all 315 bundled Gaia sources around the Sun using their Galactic coordinates and parallax distances.
   - Orbit, pinch to zoom, change field of view, and reset the camera.
@@ -24,4 +31,7 @@ No next feature selected yet. Add your feature requests here.
 
 ## Ideas
 
-Add unprioritised ideas here, then move a feature to **Next** when you want to work on it.
+- [ ] Stream spatial tiles from the full Gaia catalogue, with distance/visibility-based loading and memory limits.
+- [ ] Iterate on the star glow shader and appearance controls.
+
+Move one idea to **Next** when it is ready to implement.

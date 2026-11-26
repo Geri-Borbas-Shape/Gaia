@@ -2,8 +2,9 @@
 import Combine
 import RealityKit
 import SwiftUI
+import OSLog
 
-/// Adapts Stars' entity hierarchy, camera controls, wireframes and screen-size markers to Gaia.
+/// Camera and selection around a GPU-rendered field of star billboards.
 @MainActor
 final class StarMapScene: NSObject {
 
@@ -11,8 +12,8 @@ final class StarMapScene: NSObject {
     private let root = AnchorEntity(world: .zero)
     private let camera = PerspectiveCamera()
     private let milkyWay = Entity()
-    private let starsByID: [Int64: Star]
-    private var markers: [ModelEntity] = []
+    private var starField: StarBillboardField?
+    private var renderingFailed = false
     private var subscription: Cancellable?
     private var options = StarMapOptions()
     private var center = SIMD3<Float>.zero
@@ -24,7 +25,6 @@ final class StarMapScene: NSObject {
     var onSelect: ((Star) -> Void)?
 
     init(stars: [Star]) {
-        starsByID = Dictionary(uniqueKeysWithValues: stars.map { ($0.id, $0) })
         super.init()
 
         camera.camera = PerspectiveCameraComponent(
@@ -35,18 +35,14 @@ final class StarMapScene: NSObject {
         )
         root.addChild(camera)
 
-        let mesh = MeshResource.generateSphere(radius: 1)
-        for star in stars {
-            let marker = ModelEntity(mesh: mesh, materials: [UnlitMaterial(color: UIColor(star.color))])
-            marker.position = star.scenePosition
-            marker.name = String(star.id)
-            markers.append(marker)
-            root.addChild(marker)
+        do {
+            let field = try StarBillboardField(stars: stars)
+            starField = field
+            root.addChild(field.entity)
+        } catch {
+            renderingFailed = true
+            Logger.catalog.error("Star shader failed to load: \(error, privacy: .public)")
         }
-        let sun = ModelEntity(mesh: mesh, materials: [UnlitMaterial(color: .yellow)])
-        sun.name = "Sun"
-        markers.append(sun)
-        root.addChild(sun)
 
         milkyWay.position = StarMapOptions.Focus.galacticCenter.center
         milkyWay.addChild(Self.disk(height: 335, color: UIColor(white: 0.6, alpha: 1)))
@@ -58,6 +54,17 @@ final class StarMapScene: NSObject {
     func attach(to view: ARView) {
         self.view = view
         view.scene.addAnchor(root)
+        if renderingFailed {
+            let message = UILabel()
+            message.text = "Star rendering unavailable"
+            message.textColor = .white
+            message.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(message)
+            NSLayoutConstraint.activate([
+                message.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                message.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+            ])
+        }
         let pan = UIPanGestureRecognizer(target: self, action: #selector(orbit(_:)))
         pan.maximumNumberOfTouches = 1
         view.addGestureRecognizer(pan)
@@ -82,7 +89,7 @@ final class StarMapScene: NSObject {
         }
         options = next
         camera.camera.fieldOfViewInDegrees = Float(next.fieldOfView)
-        milkyWay.isEnabled = next.showsMilkyWay && next.focus == .galacticCenter
+        milkyWay.isEnabled = next.showsMilkyWay
         if reduceMotion {
             center = next.focus.center
             orbitDistance = targetDistance
@@ -119,26 +126,7 @@ final class StarMapScene: NSObject {
 
     private func updateMarkers() {
         guard let view, view.bounds.height > 0 else { return }
-        let worldToCamera = simd_inverse(camera.transform.matrix)
-        for marker in markers {
-            let isSun = marker.name == "Sun"
-            let diameter = Float(options.markerSize) * (isSun ? 2 : 1)
-            let position = marker.position
-            let depth = -(worldToCamera * SIMD4(position.x, position.y, position.z, 1)).z
-            marker.isEnabled = depth > camera.camera.near
-            let radius: Float
-            if options.constantScreenSize || isSun {
-                radius = StarMapProjection.markerRadius(
-                    diameter: diameter,
-                    depth: depth,
-                    fieldOfView: Float(options.fieldOfView),
-                    viewportHeight: Float(view.bounds.height)
-                )
-            } else {
-                radius = Float(options.markerSize) * 0.015
-            }
-            marker.scale = SIMD3(repeating: radius)
-        }
+        starField?.update(markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height))
     }
 
     @objc private func orbit(_ gesture: UIPanGestureRecognizer) {
@@ -157,16 +145,21 @@ final class StarMapScene: NSObject {
     @objc private func selectStar(_ gesture: UITapGestureRecognizer) {
         guard let view else { return }
         let tap = gesture.location(in: view)
-        // A screen-space hit area keeps small markers tappable at both astronomical scales.
-        let candidate = markers.compactMap { marker -> (ModelEntity, CGFloat)? in
-            guard marker.isEnabled,
+        let worldToCamera = simd_inverse(camera.transform.matrix)
+        // Match the shader's visibility threshold, so hidden stars cannot steal a tap.
+        let candidate = starField?.markers.compactMap { marker -> (Star, CGFloat)? in
+            guard let star = marker.star else { return nil }
+            let depth = -(worldToCamera * SIMD4(marker.position, 1)).z
+            let diameter = StarMapProjection.projectedDiameter(
+                radius: StarMapProjection.worldRadius(solarRadius: marker.radius, markerSize: Float(options.markerSize)),
+                depth: depth, fieldOfView: Float(options.fieldOfView), viewportHeight: Float(view.bounds.height)
+            )
+            guard depth > camera.camera.near, diameter >= StarMapProjection.minimumDiameter,
                   let point = view.project(marker.position), view.bounds.contains(point) else { return nil }
             let distance = hypot(point.x - tap.x, point.y - tap.y)
-            return distance <= 22 ? (marker, distance) : nil
+            return distance <= max(12, CGFloat(diameter) / 2) ? (star, distance) : nil
         }.min { $0.1 < $1.1 }
-        if let marker = candidate?.0, let id = Int64(marker.name), let star = starsByID[id] {
-            onSelect?(star)
-        }
+        if let star = candidate?.0 { onSelect?(star) }
     }
 
     private func clampPitch() {
@@ -176,6 +169,7 @@ final class StarMapScene: NSObject {
     private static func disk(height: Float, color: UIColor) -> ModelEntity {
         var material = UnlitMaterial(color: color)
         material.triangleFillMode = .lines
+        material.faceCulling = .none
         return ModelEntity(
             mesh: .generateCylinder(height: height, radius: 13_400),
             materials: [material]

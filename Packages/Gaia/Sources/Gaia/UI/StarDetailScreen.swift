@@ -7,6 +7,15 @@ struct StarDetailScreen: View {
 
     var body: some View {
         List {
+            Section {
+                LabeledContent("Temperature class", value: star.appearance.temperatureClass)
+                row(star.appearance.hasMeasuredRadius ? "Gaia radius" : "Estimated radius",
+                    star.appearance.radius, unit: "R☉", digits: 3)
+            } header: {
+                Text("Star appearance")
+            } footer: {
+                Text("Colours follow temperature. The temperature class and missing radii are approximate; map sizes are exaggerated.")
+            }
             Section("Derived") {
                 row("Distance", star.distanceInLightYears, unit: "ly")
                 row("Distance error", star.distanceErrorInParsecs * Star.lightYearsPerParsec, unit: "ly", digits: UI.positionDigits)

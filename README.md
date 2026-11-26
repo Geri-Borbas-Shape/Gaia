@@ -1,9 +1,9 @@
 # Gaia
 
-An iOS app that lists the Milky Way stars within 8 parsecs of the Sun, with measurements from the European Space Agency's Gaia mission (Data Release 3).
+An iOS app for exploring nearby stars in 3D, with measurements from the European Space Agency’s Gaia mission (Data Release 3). The map covers 50 parsecs; the searchable nearby list covers 8 parsecs.
 
-- 315 Gaia DR3 sources, bundled as [`nearby_stars.csv`](Packages/Gaia/Sources/Gaia/Resources/nearby_stars.csv)
-- Interactive RealityKit 3D map with orbit/zoom, Sun and Milky Way views, and adjustable star markers
+- 51,983 Gaia DR3 sources, bundled as [`nearby_stars.csv`](Packages/Gaia/Sources/Gaia/Resources/nearby_stars.csv)
+- Interactive RealityKit 3D map with orbit/zoom, Sun and Milky Way views, and radius-scaled, temperature-coloured stars with shader glow
 - Searchable list sorted by distance, brightness or name
 - Detail screen with position, Gaia measurements and derived values (distance, absolute magnitude, transverse velocity)
 

@@ -29,11 +29,9 @@ struct StarMapControls: View {
                     Slider(value: $options.markerSize, in: 2...12, step: 1) {
                         Text("Marker size")
                     }
-                    Toggle("Constant screen size", isOn: $options.constantScreenSize)
                     Toggle("Milky Way wireframe", isOn: $options.showsMilkyWay)
-                        .disabled(options.focus != .galacticCenter)
                 } footer: {
-                    Text("Constant screen size keeps distant stars visible as you move. Turn it off for perspective-scaled spheres. Sizes do not represent stellar radii. The wireframe is available in the Milky Way view.")
+                    Text("Star sizes follow their radii, exaggerated for visibility. Zoom in to reveal smaller stars. Colours follow temperature; missing measurements are estimated. The Milky Way grid stays available in both views.")
                 }
             }
             .navigationTitle("Map Controls")

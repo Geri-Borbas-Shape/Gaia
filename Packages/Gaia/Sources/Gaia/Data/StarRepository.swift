@@ -19,13 +19,20 @@ public struct StarRepository: Sendable {
     public static let defaultMaximumDistance = 8.0
 
     public let stars: [Star]
+    public let maximumDistance: Double
 
     public init(stars: [Star] = []) {
         self.stars = stars
+        maximumDistance = stars.lazy.map(\.distanceInParsecs).max() ?? 0
     }
 
     /// Loads `nearby_stars.csv` from the package bundle.
     public static func bundled() throws -> StarRepository {
+        try bundledResult.get()
+    }
+
+    /// The bundled file is immutable; share one parsed sample between the map and list.
+    private static let bundledResult: Result<StarRepository, Error> = Result {
         guard let url = Bundle.module.url(forResource: "nearby_stars", withExtension: "csv") else {
             throw LoadError.missingResource
         }

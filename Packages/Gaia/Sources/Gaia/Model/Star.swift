@@ -33,6 +33,9 @@ public struct Star: Identifiable, Hashable, Sendable {
 
     /// Kilometres per second, positive when receding.
     public let radialVelocity: Double?
+
+    /// GSP-Phot radius in solar radii, when available in Gaia DR3.
+    public var radiusInSolarRadii: Double? = nil
 }
 
 // MARK: - Derived values

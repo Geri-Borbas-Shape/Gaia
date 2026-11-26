@@ -3,7 +3,10 @@ import Testing
 
 @Test func bundledCatalogueLoads() throws {
     let store = try StarRepository.bundled()
-    #expect(store.stars.count == 315)
+    #expect(store.stars.count > 10_000)
+    #expect(store.stars.allSatisfy { $0.distanceInParsecs <= 50 })
+    #expect(store.stars.contains { $0.distanceInParsecs > 49 })
+    #expect(store.stars.filter { $0.radiusInSolarRadii != nil }.count > 100)
 }
 
 @Test func nearestStarIsProximaCentauri() throws {
@@ -24,7 +27,7 @@ import Testing
 
 @Test func photometryIsOptional() throws {
     let store = try StarRepository.bundled()
-    #expect(store.stars.filter { $0.magnitude == nil }.count == 2)
+    #expect(store.stars.filter { $0.distanceInParsecs <= 10 && $0.magnitude == nil }.count == 2)
     #expect(store.stars(sortedBy: .brightness).last?.magnitude == nil)
 }
 
