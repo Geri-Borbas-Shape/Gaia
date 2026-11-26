@@ -2,7 +2,7 @@
 import RealityKit
 import SwiftUI
 
-/// A non-AR RealityKit host preserves Gaia's iOS 17 deployment target.
+/// A non-AR RealityKit host for the interactive star map.
 struct StarMapView: UIViewRepresentable {
     let stars: [Star]
     let options: StarMapOptions

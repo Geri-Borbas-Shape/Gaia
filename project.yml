@@ -2,7 +2,7 @@ name: Gaia
 options:
   bundleIdPrefix: com.example
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "27.0"
 packages:
   Gaia:
     path: Packages/Gaia

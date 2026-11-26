@@ -20,7 +20,7 @@ No next feature selected yet. Add your feature requests here.
   - Animate between the Sun and Galactic centre, with thin/thick Milky Way wireframes for context.
   - Adjust marker size and switch between constant screen size and perspective sizing.
   - Tap a star for its measurements; keep the searchable catalogue in its own tab.
-  - Preserve iOS 17 support and macOS package tests.
+  - Target iOS 27 and retain macOS package tests.
 
 ## Ideas
 

@@ -32,7 +32,7 @@ cd Packages/Gaia
 swift test
 ```
 
-The app targets iOS 17. The package also builds on macOS 14, so the tests run without a simulator.
+The app requires iOS 27 and Xcode 27 or newer. The package also builds on macOS 14, so the tests run without a simulator.
 
 Run the `GaiaApp` scheme's UI tests in Xcode to verify map gestures, controls, star selection and catalogue navigation.
 

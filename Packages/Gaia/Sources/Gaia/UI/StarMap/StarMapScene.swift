@@ -27,7 +27,12 @@ final class StarMapScene: NSObject {
         starsByID = Dictionary(uniqueKeysWithValues: stars.map { ($0.id, $0) })
         super.init()
 
-        camera.camera = PerspectiveCameraComponent(near: 0.01, far: 200_000, fieldOfViewInDegrees: 50)
+        camera.camera = PerspectiveCameraComponent(
+            near: 0.01,
+            far: 200_000,
+            fieldOfViewInDegrees: 50,
+            fieldOfViewOrientation: .vertical
+        )
         root.addChild(camera)
 
         let mesh = MeshResource.generateSphere(radius: 1)
@@ -168,36 +173,13 @@ final class StarMapScene: NSObject {
         pitch = min(max(pitch, -.pi / 2 + 0.05), .pi / 2 - 0.05)
     }
 
-    private static func disk(height: Float, color: UIColor) -> Entity {
-        let disk = Entity()
-        let mesh = MeshResource.generateBox(size: 1)
-        let material = UnlitMaterial(color: color)
-        let segments = 64
-        let radius: Float = 13_400
-
-        func point(_ index: Int, _ y: Float) -> SIMD3<Float> {
-            let angle = Float(index) / Float(segments) * 2 * .pi
-            return SIMD3(radius * cos(angle), y, radius * sin(angle))
-        }
-
-        func line(from start: SIMD3<Float>, to end: SIMD3<Float>) {
-            let line = ModelEntity(mesh: mesh, materials: [material])
-            line.position = (start + end) / 2
-            line.scale = SIMD3(100, simd_distance(start, end), 100)
-            line.orientation = simd_quatf(from: SIMD3(0, 1, 0), to: simd_normalize(end - start))
-            disk.addChild(line)
-        }
-
-        // Explicit edges work on iOS 17 and avoid the cylinder's triangulation diagonals.
-        for index in 0..<segments {
-            for y in [-height / 2, height / 2] {
-                line(from: point(index, y), to: point(index + 1, y))
-            }
-            if index.isMultiple(of: 8) {
-                line(from: point(index, -height / 2), to: point(index, height / 2))
-            }
-        }
-        return disk
+    private static func disk(height: Float, color: UIColor) -> ModelEntity {
+        var material = UnlitMaterial(color: color)
+        material.triangleFillMode = .lines
+        return ModelEntity(
+            mesh: .generateCylinder(height: height, radius: 13_400),
+            materials: [material]
+        )
     }
 }
 #endif
