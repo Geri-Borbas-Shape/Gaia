@@ -15,9 +15,11 @@ Use `feature/<short-kebab-case-description>` for the branch and `Feature: <concr
 
 ## Describe
 
-Lead with the concrete problem and resulting user-visible behaviour. Keep detail proportional to the change, and describe the final implementation rather than the conversation history.
+Start with one short paragraph in simple, plain English explaining what the feature does for the user. Then add a brief Markdown checklist (`- [x]`) with only the essential technical changes and actual validation results. Keep each item short; do not mark unfinished work or unrun checks as complete.
 
-Include relevant validation. Include requested screenshots and video clips in the PR description, labelled with the behaviour they demonstrate. Update the title and description when the scope changes.
+Avoid extra prose sections, implementation narratives, and conversation history. Keep any material limitation to one short sentence or checklist item. Update the description to match the final change.
+
+Preserve requested screenshots and video clips after the checklist, with short labels. When there are several, group them in a collapsible `<details>` section so the main description stays short. Follow the video requirements below.
 
 ## Video evidence
 
