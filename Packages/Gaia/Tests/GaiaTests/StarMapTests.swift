@@ -59,11 +59,13 @@ import Testing
     options.focus = .galacticCenter
     options.fieldOfView = 10
     options.showsMilkyWay = false
+    options.visibleStarCount = 1_000
     options.glow = .init(size: 4, intensity: 1, bias: 0.25)
     options.reset()
     #expect(options.focus == .sun)
     #expect(options.fieldOfView == 50)
     #expect(options.showsMilkyWay)
+    #expect(options.visibleStarCount == 500)
     #expect(options.glow == StarGlowSettings())
     #expect(options.resetID == 1)
     options.reset()

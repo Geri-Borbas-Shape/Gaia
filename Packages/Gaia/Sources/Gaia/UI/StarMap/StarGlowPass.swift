@@ -15,12 +15,13 @@ final class StarGlowPass: @unchecked Sendable {
         var projection = matrix_identity_float4x4
         var controls = SIMD4<Float>(0, 0, StarMapProjection.minimumDiameter, StarMapProjection.glowExtent)
         var glow = SIMD4<Float>(0.16, 1, StarMapProjection.glowExtent, 0)
+        var visibility = SIMD4<Float>(StarVisibility.maximumDiameter, 0, 0, 0)
     }
 
     private let device: any MTLDevice
     private let library: any MTLLibrary
     private let stars: any MTLBuffer
-    private let starCount: Int
+    private var visibleIndices: [UInt32]
     private let lock = NSLock()
     private var uniforms = Uniforms()
     private var pipelines: [MTLPixelFormat: (copy: any MTLRenderPipelineState, glow: any MTLRenderPipelineState)] = [:]
@@ -28,7 +29,7 @@ final class StarGlowPass: @unchecked Sendable {
     init(stars: [Star], device: any MTLDevice, library: (any MTLLibrary)? = nil) throws {
         self.device = device
         self.library = try library ?? device.makeDefaultLibrary(bundle: .module)
-        starCount = stars.count
+        visibleIndices = (0..<min(stars.count, StarVisibility.maximumCount)).map(UInt32.init)
         guard let buffer = stars.withUnsafeBytes({ bytes in
             device.makeBuffer(bytes: bytes.baseAddress!, length: bytes.count, options: .storageModeShared)
         }) else { throw RenderError.bufferUnavailable }
@@ -36,13 +37,22 @@ final class StarGlowPass: @unchecked Sendable {
         self.stars.label = "Star glow instances"
     }
 
+    func setVisibleIndices(_ indices: [Int]) {
+        precondition(indices.count <= StarVisibility.maximumCount)
+        lock.lock()
+        defer { lock.unlock() }
+        visibleIndices = indices.map(UInt32.init)
+    }
+
     func update(worldToView: simd_float4x4, markerSize: Float, viewportHeight: Float,
-                glow: StarGlowSettings = .init()) {
+                glow: StarGlowSettings = .init(), visibility: StarVisibility.Frame? = nil) {
         lock.lock()
         defer { lock.unlock() }
         uniforms.worldToView = worldToView
-        uniforms.controls.x = markerSize * StarMapProjection.parsecsPerSolarRadius
+        let scale = visibility?.scale ?? 1
+        uniforms.controls.x = markerSize * StarMapProjection.parsecsPerSolarRadius * scale
         uniforms.controls.y = viewportHeight
+        uniforms.controls.z = (visibility?.threshold ?? StarMapProjection.minimumDiameter) * scale
         uniforms.controls.w = StarMapProjection.glowExtent * Float(glow.size)
         uniforms.glow.x = Float(glow.intensity)
         uniforms.glow.y = Float(glow.bias)
@@ -70,7 +80,11 @@ final class StarGlowPass: @unchecked Sendable {
         encoder.setRenderPipelineState(pipeline.glow)
         encoder.setVertexBuffer(stars, offset: 0, index: 0)
         encoder.setVertexBytes(&frame, length: MemoryLayout<Uniforms>.stride, index: 1)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: starCount)
+        if !visibleIndices.isEmpty {
+            // At most 1,000 indices (4,000 bytes), copied by Metal into this frame's command buffer.
+            visibleIndices.withUnsafeBytes { encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: 2) }
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: visibleIndices.count)
+        }
         encoder.endEncoding()
     }
 

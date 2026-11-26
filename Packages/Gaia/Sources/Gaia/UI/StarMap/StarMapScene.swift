@@ -9,6 +9,16 @@ import OSLog
 final class StarMapScene: NSObject, MTKViewDelegate {
 
     private weak var view: MTKView?
+    private weak var selectionOverlay: StarSelectionOverlay?
+    private var selectedIndex: Int?
+    private var visibilityPolicy: StarVisibility?
+    private var visibleFrame = StarVisibility.Frame()
+    private var lastCamera: simd_float4x4?
+    private var lastViewport = SIMD2<Float>.zero
+    private var lastMarkerSize: Double = 0
+    private var lastVisibleStarCount: Double = 0
+    private var lastFieldOfView: Double = 0
+    private var reportedCount = -1
     private let root = Entity()
     private let camera = PerspectiveCamera()
     private let milkyWay = Entity()
@@ -23,14 +33,15 @@ final class StarMapScene: NSObject, MTKViewDelegate {
     private var yaw: Float = .pi / 5
     private var pitch: Float = .pi / 7
     private var reduceMotion = false
-    var onSelect: ((Star) -> Void)?
+    var onOpenDetails: ((Star) -> Void)?
+    var onVisibleCountChange: ((Int) -> Void)?
 
     init(stars: [Star]) {
         super.init()
 
         camera.camera = PerspectiveCameraComponent(
             near: 0.01,
-            far: 200_000,
+            far: 2_000_000,
             fieldOfViewInDegrees: 50,
             fieldOfViewOrientation: .vertical
         )
@@ -39,6 +50,7 @@ final class StarMapScene: NSObject, MTKViewDelegate {
         do {
             let field = try StarBillboardField(stars: stars)
             starField = field
+            visibilityPolicy = StarVisibility(sources: field.markers.map { .init(position: $0.position, radius: $0.radius) })
             root.addChild(field.entity)
         } catch {
             renderingFailed = true
@@ -52,8 +64,14 @@ final class StarMapScene: NSObject, MTKViewDelegate {
         positionCamera()
     }
 
-    func attach(to view: MTKView) {
+    func attach(to canvas: StarMapCanvas) {
+        let view = canvas.metalView
         self.view = view
+        selectionOverlay = canvas.selection
+        canvas.selection.onOpenDetails = { [weak self] in
+            guard let self, let index = self.selectedIndex, let star = self.starField?.markers[index].star else { return }
+            self.onOpenDetails?(star)
+        }
         view.delegate = self
         do {
             guard let device = view.device else { throw CocoaError(.featureUnsupported) }
@@ -85,6 +103,8 @@ final class StarMapScene: NSObject, MTKViewDelegate {
     func update(options next: StarMapOptions, reduceMotion: Bool) {
         self.reduceMotion = reduceMotion
         if next.resetID != options.resetID {
+            selectedIndex = nil
+            selectionOverlay?.isHidden = true
             yaw = .pi / 5
             pitch = .pi / 7
         } else {
@@ -134,14 +154,6 @@ final class StarMapScene: NSObject, MTKViewDelegate {
                             [0, 0, far / (near - far), -1], [0, 0, near * far / (near - far), 0])
     }
 
-    private func project(_ position: SIMD3<Float>) -> CGPoint? {
-        guard let view else { return nil }
-        let clip = projectionMatrix * simd_inverse(camera.transform.matrix) * SIMD4(position, 1)
-        guard clip.w > 0 else { return nil }
-        return CGPoint(x: CGFloat(clip.x / clip.w + 1) * view.bounds.width / 2,
-                       y: CGFloat(1 - clip.y / clip.w) * view.bounds.height / 2)
-    }
-
     private func tick(deltaTime: Float) {
         let blend: Float = reduceMotion ? 1 : 1 - exp(-min(deltaTime, 0.1) * 8)
         center += (options.focus.center - center) * blend
@@ -152,15 +164,51 @@ final class StarMapScene: NSObject, MTKViewDelegate {
 
     private func positionCamera() {
         let direction = SIMD3(cos(pitch) * sin(yaw), sin(pitch), cos(pitch) * cos(yaw))
+        if let view, let policy = visibilityPolicy {
+            let safeDistance = policy.cameraDistance(center: center, direction: direction, requested: orbitDistance,
+                viewport: SIMD2(Float(view.bounds.width), Float(view.bounds.height)), fieldOfView: Float(options.fieldOfView),
+                targetCount: Int(options.visibleStarCount))
+            if safeDistance > orbitDistance {
+                orbitDistance = safeDistance
+                if simd_distance(center, options.focus.center) < 0.01 { targetDistance = max(targetDistance, safeDistance) }
+            }
+        }
         camera.look(at: center, from: center + direction * orbitDistance, relativeTo: nil)
     }
 
     private func updateMarkers() {
-        guard let view, view.bounds.height > 0 else { return }
-        starField?.update(markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height))
-        starField?.glowPass.update(worldToView: simd_inverse(camera.transform.matrix),
-                                  markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height),
-                                  glow: options.glow)
+        guard let view, view.bounds.height > 0, let policy = visibilityPolicy else { return }
+        let worldToView = simd_inverse(camera.transform.matrix)
+        let viewport = SIMD2(Float(view.bounds.width), Float(view.bounds.height))
+        if lastCamera != worldToView || lastViewport != viewport || lastMarkerSize != options.markerSize
+            || lastFieldOfView != options.fieldOfView || lastVisibleStarCount != options.visibleStarCount {
+            visibleFrame = policy.frame(worldToView: worldToView, viewport: viewport,
+                                        fieldOfView: Float(options.fieldOfView), markerSize: Float(options.markerSize),
+                                        targetCount: Int(options.visibleStarCount))
+            lastCamera = worldToView
+            lastViewport = viewport
+            lastMarkerSize = options.markerSize
+            lastVisibleStarCount = options.visibleStarCount
+            lastFieldOfView = options.fieldOfView
+        }
+        starField?.update(markerSize: Float(options.markerSize), viewportHeight: viewport.y, visibility: visibleFrame)
+        starField?.glowPass.update(worldToView: worldToView, markerSize: Float(options.markerSize),
+                                  viewportHeight: viewport.y, glow: options.glow, visibility: visibleFrame)
+        if reportedCount != visibleFrame.stars.count {
+            reportedCount = visibleFrame.stars.count
+            view.accessibilityValue = "\(reportedCount) stars shown"
+            onVisibleCountChange?(reportedCount)
+        }
+        updateSelection()
+    }
+
+    private func updateSelection() {
+        guard let index = selectedIndex, let projected = visibleFrame.stars.first(where: { $0.index == index }),
+              let star = starField?.markers[index].star else {
+            selectionOverlay?.isHidden = true
+            return
+        }
+        selectionOverlay?.show(star: star, point: projected.point, diameter: visibleFrame.displayedDiameter(projected))
     }
 
     @objc private func orbit(_ gesture: UIPanGestureRecognizer) {
@@ -178,22 +226,19 @@ final class StarMapScene: NSObject, MTKViewDelegate {
 
     @objc private func selectStar(_ gesture: UITapGestureRecognizer) {
         guard let view else { return }
-        let tap = gesture.location(in: view)
-        let worldToCamera = simd_inverse(camera.transform.matrix)
-        // Match the shader's visibility threshold, so hidden stars cannot steal a tap.
-        let candidate = starField?.markers.compactMap { marker -> (Star, CGFloat)? in
-            guard let star = marker.star else { return nil }
-            let depth = -(worldToCamera * SIMD4(marker.position, 1)).z
-            let diameter = StarMapProjection.projectedDiameter(
-                radius: StarMapProjection.worldRadius(solarRadius: marker.radius, markerSize: Float(options.markerSize)),
-                depth: depth, fieldOfView: Float(options.fieldOfView), viewportHeight: Float(view.bounds.height)
-            )
-            guard depth > camera.camera.near, diameter >= StarMapProjection.minimumDiameter,
-                  let point = project(marker.position), view.bounds.contains(point) else { return nil }
-            let distance = hypot(point.x - tap.x, point.y - tap.y)
-            return distance <= max(12, CGFloat(diameter) / 2) ? (star, distance) : nil
-        }.min { $0.1 < $1.1 }
-        if let star = candidate?.0 { onSelect?(star) }
+        let location = gesture.location(in: view)
+        let tap = SIMD2(Float(location.x), Float(location.y))
+        // Use exactly the projected candidates and sizes chosen for the rendered frame.
+        let candidate = visibleFrame.stars.filter { star in
+            starField?.markers[star.index].star != nil
+                && simd_distance(star.point, tap) <= max(12, visibleFrame.displayedDiameter(star) / 2)
+        }.min {
+            let first = simd_distance($0.point, tap), second = simd_distance($1.point, tap)
+            // At Galactic scale many centres overlap; prefer the foreground core.
+            return abs(first - second) < 1 ? $0.depth < $1.depth : first < second
+        }
+        selectedIndex = candidate?.index
+        updateSelection()
     }
 
     private func clampPitch() {

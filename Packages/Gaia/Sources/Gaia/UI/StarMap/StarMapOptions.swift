@@ -26,6 +26,7 @@ struct StarMapOptions: Equatable {
     var focus = Focus.sun
     var fieldOfView = 50.0
     var markerSize = 5.0
+    var visibleStarCount = Double(StarVisibility.defaultCount)
     var glow = StarGlowSettings()
     var showsMilkyWay = true
     var resetID = 0

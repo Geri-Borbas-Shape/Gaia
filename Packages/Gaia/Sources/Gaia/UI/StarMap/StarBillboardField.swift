@@ -23,6 +23,9 @@ final class StarBillboardField {
     let entity: ModelEntity
     let glowPass: StarGlowPass
     private var material: CustomMaterial
+    private let mesh: LowLevelMesh
+    private let meshBounds: BoundingBox
+    private var visibleIndices: [Int]?
 
     init(stars: [Star]) throws {
         let markers = stars.map { star in
@@ -55,9 +58,10 @@ final class StarBillboardField {
                 .init(semantic: .uv1, format: .float2, offset: MemoryLayout<Vertex>.offset(of: \.radius)!)
             ],
             vertexLayouts: [.init(bufferIndex: 0, bufferStride: MemoryLayout<Vertex>.stride)],
-            indexCapacity: markers.count * 6
+            indexCapacity: min(markers.count, StarVisibility.maximumCount) * 6
         )
         let mesh = try LowLevelMesh(descriptor: descriptor)
+        self.mesh = mesh
         let corners: [SIMD2<Float>] = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
         mesh.withUnsafeMutableBytes(bufferIndex: 0) { bytes in
             let vertices = bytes.bindMemory(to: Vertex.self)
@@ -72,7 +76,7 @@ final class StarBillboardField {
         }
         mesh.withUnsafeMutableIndices { bytes in
             let indices = bytes.bindMemory(to: UInt32.self)
-            for index in markers.indices {
+            for index in 0..<min(markers.count, StarVisibility.maximumCount) {
                 for (offset, corner) in [0, 1, 2, 0, 2, 3].enumerated() {
                     indices[index * 6 + offset] = UInt32(index * 4 + corner)
                 }
@@ -88,15 +92,30 @@ final class StarBillboardField {
             lower = simd_min(lower, marker.position - extent)
             upper = simd_max(upper, marker.position + extent)
         }
-        mesh.parts.replaceAll([.init(indexCount: markers.count * 6, bounds: BoundingBox(min: lower, max: upper))])
+        meshBounds = BoundingBox(min: lower, max: upper)
+        mesh.parts.replaceAll([.init(indexCount: min(markers.count, StarVisibility.maximumCount) * 6, bounds: meshBounds)])
         let resource = try MeshResource(from: mesh)
         entity = ModelEntity(mesh: resource, materials: [material])
         entity.name = "Gaia star billboards"
     }
 
-    func update(markerSize: Float, viewportHeight: Float) {
-        let uniforms = SIMD4(markerSize * StarMapProjection.parsecsPerSolarRadius, viewportHeight,
-                             StarMapProjection.minimumDiameter, StarMapProjection.glowExtent)
+    func update(markerSize: Float, viewportHeight: Float, visibility: StarVisibility.Frame) {
+        let indices = visibility.stars.map(\.index).sorted()
+        if indices != visibleIndices {
+            mesh.withUnsafeMutableIndices { bytes in
+                let buffer = bytes.bindMemory(to: UInt32.self)
+                for (slot, index) in indices.enumerated() {
+                    for (offset, corner) in [0, 1, 2, 0, 2, 3].enumerated() {
+                        buffer[slot * 6 + offset] = UInt32(index * 4 + corner)
+                    }
+                }
+            }
+            mesh.parts.replaceAll([.init(indexCount: indices.count * 6, bounds: meshBounds)])
+            glowPass.setVisibleIndices(indices)
+            visibleIndices = indices
+        }
+        let uniforms = SIMD4(markerSize * StarMapProjection.parsecsPerSolarRadius * visibility.scale, viewportHeight,
+                             visibility.threshold * visibility.scale, StarVisibility.maximumDiameter)
         guard material.custom.value != uniforms else { return }
         material.custom.value = uniforms
         entity.model?.materials = [material]
