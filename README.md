@@ -3,6 +3,7 @@
 An iOS app that lists the Milky Way stars within 8 parsecs of the Sun, with measurements from the European Space Agency's Gaia mission (Data Release 3).
 
 - 315 Gaia DR3 sources, bundled as [`nearby_stars.csv`](Packages/Gaia/Sources/Gaia/Resources/nearby_stars.csv)
+- Interactive RealityKit 3D map with orbit/zoom, Sun and Milky Way views, and adjustable star markers
 - Searchable list sorted by distance, brightness or name
 - Detail screen with position, Gaia measurements and derived values (distance, absolute magnitude, transverse velocity)
 
@@ -31,13 +32,17 @@ cd Packages/Gaia
 swift test
 ```
 
-The app targets iOS 17. The package also builds on macOS 14, so the tests run without a simulator.
+The app requires iOS 27 and Xcode 27 or newer. The package also builds on macOS 14, so the tests run without a simulator.
+
+Run the `GaiaApp` scheme's UI tests in Xcode to verify map gestures, controls, star selection and catalogue navigation.
 
 ## Documentation
 
 - [`Architecture`](Documentation/Architecture.md)
 - [`Data`](Documentation/Data.md)
 - [`UI`](Documentation/UI.md)
+- [`3D map`](Documentation/3D.md)
+- [`Feature roadmap`](ROADMAP.md) — add features to implement one at a time
 
 ## Acknowledgement
 

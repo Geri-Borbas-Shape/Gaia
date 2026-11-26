@@ -4,7 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "Gaia",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS("27.0"), .macOS(.v14)],
     products: [
         .library(name: "Gaia", targets: ["Gaia"])
     ],

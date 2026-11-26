@@ -1,10 +1,10 @@
 # UI
 
-Two screens in one `NavigationStack`: the star list and the star detail.
+`GaiaScreen` provides a **3D Map** tab and a **Catalogue** tab on iOS. The [3D map](3D.md) opens first and supports orbiting, zooming, Galactic context and star details. The catalogue keeps the star list and star detail in its own `NavigationStack`.
 
 ## Star list
 
-[`StarListScreen`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L4) is the root screen, titled "Nearby Stars".
+[`StarListScreen`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L4) is the root screen of the Catalogue tab, titled "Nearby Stars".
 
 - The list shows `StarListViewModel.stars`, one [`StarRow`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L42) per star.
 - The search field binds to `searchText`, with the prompt "Name or Gaia source ID".

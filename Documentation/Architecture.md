@@ -1,6 +1,8 @@
 # Architecture
 
-The app is one Swift package, `Gaia`, plus a thin app target that shows the package's root screen.
+The app is one Swift package, `Gaia`, plus a thin app target that shows `GaiaScreen`. On iOS, the root has a 3D Map tab and a Catalogue tab. The catalogue retains its own navigation stack.
+
+The [3D map](3D.md) lives in `UI/StarMap/`. A SwiftUI screen owns catalogue and control state; a representable coordinator owns the RealityKit scene. The coordinate conversion extends `Star` in `Model/Star+Position.swift`. Rendering is iOS-only, while coordinates, projection calculations and catalogue logic remain testable on macOS.
 
 ## Layers
 
@@ -54,3 +56,5 @@ Logging goes through `OSLog`. [`Logger.catalog`](../Packages/Gaia/Sources/Gaia/D
 ## Tests
 
 [`CatalogTests`](../Packages/Gaia/Tests/GaiaTests/CatalogTests.swift) uses Swift Testing and runs against the bundled data, with no mocks.
+
+[`StarMapTests`](../Packages/Gaia/Tests/GaiaTests/StarMapTests.swift) covers coordinates, projection sizing and camera-option reset. [`StarMapUITests`](../Tests/GaiaAppUITests/StarMapUITests.swift) exercises the iOS map gestures, controls, star selection and catalogue navigation through the generated `GaiaApp` scheme.
