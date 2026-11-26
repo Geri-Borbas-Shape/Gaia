@@ -20,7 +20,7 @@ final class StarMapUITests: XCTestCase {
 
         captureMarker("galactic-context", "begin")
         app.segmentedControls.buttons["Milky Way"].tap()
-        XCTAssertTrue(app.staticTexts["Zoom in to resolve individual stars"].waitForExistence(timeout: 3))
+        assertVisibleStarBudget(in: app)
         app.buttons["Map controls"].tap()
         XCTAssertTrue(app.navigationBars["Map Controls"].waitForExistence(timeout: 3))
         reveal(app.sliders["Field of view"], in: app)
@@ -71,11 +71,58 @@ final class StarMapUITests: XCTestCase {
         // A point within the rendered nearby-star cloud, away from the Sun marker.
         let star = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
         star.tap()
+        let name = app.staticTexts["selected-star-name"]
+        let data = app.buttons["selected-star-data"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertTrue(data.isHittable)
+        XCTAssertFalse(app.staticTexts["Temperature class"].exists)
+        attachScreenshot(of: app, named: "Selected star overlay")
+        let before = name.frame
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.55, dy: 0.55))
+            .press(forDuration: 0.05, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.59, dy: 0.55)))
+        XCTAssertTrue(name.exists)
+        XCTAssertNotEqual(name.frame, before)
+        data.tap()
         XCTAssertTrue(app.staticTexts["Temperature class"].waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Star details")
         app.buttons["Done"].tap()
         XCTAssertTrue(map.waitForExistence(timeout: 3))
+        XCTAssertTrue(data.waitForExistence(timeout: 3))
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.05)).tap()
+        XCTAssertFalse(data.exists)
         captureMarker("orbit-zoom-selection", "end")
+    }
+
+    func testMilkyWayStarsSurviveCameraSwitchesAndExtremeZoom() {
+        let app = XCUIApplication()
+        app.launch()
+        let map = app.otherElements["star-map"]
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        captureMarker("adaptive-visibility", "begin")
+        app.segmentedControls.buttons["Milky Way"].tap()
+        assertVisibleStarBudget(in: app)
+        attachScreenshot(of: app, named: "Milky Way stars")
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.34, dy: 0.465)).tap()
+        XCTAssertTrue(app.buttons["selected-star-data"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.staticTexts["Temperature class"].exists)
+        attachScreenshot(of: app, named: "Milky Way selection")
+        map.pinch(withScale: 0.2, velocity: -1)
+        assertVisibleStarBudget(in: app)
+        attachScreenshot(of: app, named: "Distant stars remain visible")
+        map.pinch(withScale: 20, velocity: 4)
+        assertVisibleStarBudget(in: app)
+        attachScreenshot(of: app, named: "Zoom keeps catalogue in frame")
+        app.segmentedControls.buttons["Sun"].tap()
+        assertVisibleStarBudget(in: app)
+        attachScreenshot(of: app, named: "Sun camera stars")
+        captureMarker("adaptive-visibility", "end")
+    }
+
+    private func assertVisibleStarBudget(in app: XCUIApplication) {
+        let summary = app.staticTexts["map-catalogue-summary"]
+        XCTAssertTrue(summary.waitForExistence(timeout: 3))
+        let count = Int(summary.label.split(separator: " ").first ?? "0") ?? 0
+        XCTAssertTrue((100...1_000).contains(count), "Unexpected star count: \(summary.label)")
     }
 
     func testGlowControlsUpdateTheMapWhileSheetIsOpen() throws {

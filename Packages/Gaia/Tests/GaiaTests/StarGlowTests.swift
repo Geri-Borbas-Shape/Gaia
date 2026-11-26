@@ -4,7 +4,7 @@ import Testing
 @testable import Gaia
 
 private func renderGlow(_ stars: [StarGlowPass.Star], background: [UInt8] = [80, 120, 160, 255],
-                        settings: StarGlowSettings = .init()) throws -> [UInt8] {
+                        settings: StarGlowSettings = .init(), visibleIndices: [Int]? = nil) throws -> [UInt8] {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let queue = try #require(device.makeCommandQueue())
     let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 64, height: 64, mipmapped: false)
@@ -17,6 +17,7 @@ private func renderGlow(_ stars: [StarGlowPass.Star], background: [UInt8] = [80,
         source.replace(region: MTLRegionMake2D(0, 0, 64, 64), mipmapLevel: 0, withBytes: $0.baseAddress!, bytesPerRow: 64 * 4)
     }
     let pass = try StarGlowPass(stars: stars, device: device)
+    if let visibleIndices { pass.setVisibleIndices(visibleIndices) }
     pass.update(worldToView: matrix_identity_float4x4, markerSize: 12, viewportHeight: 64, glow: settings)
     let projection = simd_float4x4([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, -1], [0, 0, -0.01, 0])
     let command = try #require(queue.makeCommandBuffer())
@@ -81,4 +82,11 @@ private let coolGlow = StarGlowPass.Star(positionRadius: [0, 0, -10, 4], color: 
     #expect(wide[wing] > normal[wing])
     #expect(soft[wing] > normal[wing] && normal[wing] > tight[wing])
     #expect(soft[centre] == tight[centre]) // Bias preserves peak intensity.
+}
+
+@Test func onlyChosenStarsContributeToTheGlowPass() throws {
+    let selected = try renderGlow([warmGlow, coolGlow], visibleIndices: [1])
+    #expect(selected == (try renderGlow([coolGlow])))
+    let empty = try renderGlow([warmGlow, coolGlow], visibleIndices: [])
+    #expect(empty == (0..<(64 * 64)).flatMap { _ in [UInt8(80), 120, 160, 255] })
 }

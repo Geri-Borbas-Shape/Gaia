@@ -4,25 +4,28 @@ using namespace metal;
 
 // Each quad stores its star's centre in position, a signed corner in uv0, radius in
 // uv1.x and temperature colour in color. Swift supplies scale, viewport height,
-// minimum visible diameter and halo extent in custom_parameter().
+// minimum visible diameter and maximum displayed diameter in custom_parameter().
 [[visible]]
 void starBillboardGeometry(realitykit::geometry_parameters params) {
     auto geometry = params.geometry();
     const float4 controls = params.uniforms().custom_parameter();
     const float4x4 worldToView = params.uniforms().model_to_view() * params.uniforms().world_to_model();
     const float depth = -(worldToView * float4(geometry.world_position(), 1)).z;
-    const float radius = geometry.uv1().x * controls.x;
+    float radius = geometry.uv1().x * controls.x;
     const float projectionY = params.uniforms().view_to_projection()[1][1];
     const float diameter = radius * abs(projectionY) * controls.y / max(depth, 0.0001f);
-    const bool visible = depth > 0.01f && diameter >= controls.z;
+    const float4 clip = params.uniforms().view_to_projection() * worldToView * float4(geometry.world_position(), 1);
+    const bool visible = depth > 0.01f && diameter >= controls.z
+                         && abs(clip.x) <= clip.w && abs(clip.y) <= clip.w;
+    radius *= min(1.0f, controls.w / max(diameter, 0.0001f));
 
     // Collapse sub-pixel stars to degenerate triangles: no fragments or halo are drawn.
-    const float extent = visible ? radius * controls.w : 0;
+    const float extent = visible ? radius : 0;
     const float3 right = float3(worldToView[0][0], worldToView[1][0], worldToView[2][0]);
     const float3 up = float3(worldToView[0][1], worldToView[1][1], worldToView[2][1]);
     const float2 corner = geometry.uv0();
     geometry.set_world_position_offset((right * corner.x + up * corner.y) * extent);
-    geometry.set_custom_attribute(float4(smoothstep(controls.z, controls.z * 2, diameter), controls.w, 0, 0));
+    geometry.set_custom_attribute(float4(1, 1, 0, 0));
 }
 
 // Core coverage is opaque: partial-alpha fragments must not write depth ahead of
@@ -47,6 +50,7 @@ struct GlowFrame {
     float4x4 projection;
     float4 controls; // radius scale, viewport height in points, minimum diameter, halo extent
     float4 glow; // intensity, bias exponent, unscaled profile extent, reserved
+    float4 visibility; // maximum displayed diameter, reserved
 };
 
 struct GlowVertex {
@@ -57,22 +61,24 @@ struct GlowVertex {
 };
 
 vertex GlowVertex starGlowVertex(uint vertexID [[vertex_id]], uint instanceID [[instance_id]],
-                                constant GlowStar *stars [[buffer(0)]], constant GlowFrame &frame [[buffer(1)]]) {
+                                constant GlowStar *stars [[buffer(0)]], constant GlowFrame &frame [[buffer(1)]],
+                                constant uint *visibleIndices [[buffer(2)]]) {
     constexpr float2 corners[] = {{-1,-1}, {1,-1}, {1,1}, {-1,-1}, {1,1}, {-1,1}};
-    const GlowStar star = stars[instanceID];
+    const GlowStar star = stars[visibleIndices[instanceID]];
     const float4 centre = frame.worldToView * float4(star.positionRadius.xyz, 1);
     const float depth = -centre.z;
-    const float radius = star.positionRadius.w * frame.controls.x;
+    float radius = star.positionRadius.w * frame.controls.x;
     const float diameter = radius * abs(frame.projection[1][1]) * frame.controls.y / max(depth, 0.0001f);
-    const bool visible = depth > 0.01f && diameter >= frame.controls.z;
     const float2 corner = corners[vertexID];
     float4 clip = frame.projection * centre;
+    const bool visible = depth > 0.01f && diameter >= frame.controls.z
+                         && abs(clip.x) <= clip.w && abs(clip.y) <= clip.w;
+    radius *= min(1.0f, frame.visibility.x / max(diameter, 0.0001f));
     clip.xy += corner * radius * frame.controls.w * float2(frame.projection[0][0], frame.projection[1][1]);
     clip.z = 0; // The overlay never participates in scene depth testing.
     if (!visible) { clip = float4(2, 2, 0, 1); }
     return {clip, corner, star.color,
-            float4(smoothstep(frame.controls.z, frame.controls.z * 2, diameter),
-                   frame.glow.z, frame.glow.x, frame.glow.y)};
+            float4(1, frame.glow.z, frame.glow.x, frame.glow.y)};
 }
 
 // A continuous halo across the centre as well as the edge. Each instance is screen

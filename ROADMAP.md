@@ -14,6 +14,13 @@ No next feature selected yet. Add your feature requests here.
 
 ## Completed
 
+- [x] **Keep stars visible and select them before opening details**
+  - Share adaptive visibility between Sun and Milky Way cameras, drawing 100–500 stars.
+  - Prefer larger apparent stars and promote distant markers to a visible size.
+  - Keep the catalogue in frame at extreme zoom and field of view.
+  - Track a selected star with a circle, name and plain Star Data button.
+  - Open measurements only after tapping Star Data.
+
 - [x] **Refine star appearance and expand the sample**
   - Radius-scaled markers with temperature colours and labelled estimates.
   - Hide unresolved stars until zoom makes them visible.

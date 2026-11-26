@@ -5,7 +5,8 @@ struct StarMapScreen: View {
 
     @State private var catalogue = StarListViewModel()
     @State private var options = StarMapOptions()
-    @State private var selectedStar: Star?
+    @State private var detailStar: Star?
+    @State private var visibleCount = 0
     @State private var showsControls = false
     @State private var isVisible = false
     @Environment(\.scenePhase) private var scenePhase
@@ -27,9 +28,10 @@ struct StarMapScreen: View {
                     StarMapView(
                         stars: catalogue.allStars,
                         options: options,
-                        isActive: isVisible && scenePhase == .active && selectedStar == nil,
+                        isActive: isVisible && scenePhase == .active && detailStar == nil,
                         reduceMotion: reduceMotion,
-                        onSelect: { selectedStar = $0 }
+                        onOpenDetails: { detailStar = $0 },
+                        onVisibleCountChange: { visibleCount = $0 }
                     )
                     .accessibilityIdentifier("star-map")
                 }
@@ -42,9 +44,7 @@ struct StarMapScreen: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    Text(options.focus == .sun
-                         ? "\(catalogue.allStars.count.formatted()) stars within \(catalogue.catalogueRadius) pc · Sun at the centre"
-                         : "Zoom in to resolve individual stars")
+                    Text("\(visibleCount.formatted()) stars shown · \(catalogue.catalogueRadius) pc around the Sun")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("map-catalogue-summary")
@@ -61,7 +61,7 @@ struct StarMapScreen: View {
                     }
                     Text("Drag to orbit · Pinch to zoom · Tap a star")
                         .foregroundStyle(.secondary)
-                    Text("Sizes exaggerated · Zoom reveals smaller stars")
+                    Text("Sizes adapt to zoom · Tap again on Star Data")
                         .foregroundStyle(.tertiary)
                 }
                 .font(.caption)
@@ -84,7 +84,7 @@ struct StarMapScreen: View {
                     .presentationDetents([.medium, .large])
                     .presentationContentInteraction(.scrolls)
             }
-            .sheet(item: $selectedStar) { star in
+            .sheet(item: $detailStar) { star in
                 StarMapDetail(star: star)
             }
             .task { await catalogue.load() }
