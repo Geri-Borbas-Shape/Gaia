@@ -14,6 +14,7 @@ final class StarGlowPass: @unchecked Sendable {
         var worldToView = matrix_identity_float4x4
         var projection = matrix_identity_float4x4
         var controls = SIMD4<Float>(0, 0, StarMapProjection.minimumDiameter, StarMapProjection.glowExtent)
+        var glow = SIMD4<Float>(0.16, 1, StarMapProjection.glowExtent, 0)
     }
 
     private let device: any MTLDevice
@@ -35,12 +36,16 @@ final class StarGlowPass: @unchecked Sendable {
         self.stars.label = "Star glow instances"
     }
 
-    func update(worldToView: simd_float4x4, markerSize: Float, viewportHeight: Float) {
+    func update(worldToView: simd_float4x4, markerSize: Float, viewportHeight: Float,
+                glow: StarGlowSettings = .init()) {
         lock.lock()
         defer { lock.unlock() }
         uniforms.worldToView = worldToView
         uniforms.controls.x = markerSize * StarMapProjection.parsecsPerSolarRadius
         uniforms.controls.y = viewportHeight
+        uniforms.controls.w = StarMapProjection.glowExtent * Float(glow.size)
+        uniforms.glow.x = Float(glow.intensity)
+        uniforms.glow.y = Float(glow.bias)
     }
 
     func encode(source: any MTLTexture, target: any MTLTexture, commandBuffer: any MTLCommandBuffer,

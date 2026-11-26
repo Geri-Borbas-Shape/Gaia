@@ -46,13 +46,14 @@ struct GlowFrame {
     float4x4 worldToView;
     float4x4 projection;
     float4 controls; // radius scale, viewport height in points, minimum diameter, halo extent
+    float4 glow; // intensity, bias exponent, unscaled profile extent, reserved
 };
 
 struct GlowVertex {
     float4 position [[position]];
     float2 uv;
     float4 color;
-    float2 appearance; // visibility fade and halo extent
+    float4 appearance; // visibility fade, profile extent, intensity, bias exponent
 };
 
 vertex GlowVertex starGlowVertex(uint vertexID [[vertex_id]], uint instanceID [[instance_id]],
@@ -70,7 +71,8 @@ vertex GlowVertex starGlowVertex(uint vertexID [[vertex_id]], uint instanceID [[
     clip.z = 0; // The overlay never participates in scene depth testing.
     if (!visible) { clip = float4(2, 2, 0, 1); }
     return {clip, corner, star.color,
-            float2(smoothstep(frame.controls.z, frame.controls.z * 2, diameter), frame.controls.w)};
+            float4(smoothstep(frame.controls.z, frame.controls.z * 2, diameter),
+                   frame.glow.z, frame.glow.x, frame.glow.y)};
 }
 
 // A continuous halo across the centre as well as the edge. Each instance is screen
@@ -78,9 +80,11 @@ vertex GlowVertex starGlowVertex(uint vertexID [[vertex_id]], uint instanceID [[
 // overlapping halos can only brighten the image, regardless of instance order.
 fragment half4 starGlowFragment(GlowVertex in [[stage_in]]) {
     const float distance = length(in.uv) * in.appearance.y;
-    const float halo = 0.16f * exp(-1.5f * max(distance * distance - 1, 0.0f));
+    const float halo = exp(-1.5f * max(distance * distance - 1, 0.0f));
     const float edge = 1 - smoothstep(in.appearance.y - 0.4f, in.appearance.y, distance);
-    const float intensity = halo * edge * in.appearance.x;
+    // Bias changes the falloff without changing the peak brightness. Size scales
+    // the billboard separately, so all three controls remain independent.
+    const float intensity = in.appearance.z * pow(halo * edge, in.appearance.w) * in.appearance.x;
     return half4(half3(saturate(in.color.rgb * intensity)), 0);
 }
 

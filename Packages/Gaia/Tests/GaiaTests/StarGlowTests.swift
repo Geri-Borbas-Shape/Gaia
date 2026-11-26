@@ -3,7 +3,8 @@ import simd
 import Testing
 @testable import Gaia
 
-private func renderGlow(_ stars: [StarGlowPass.Star], background: [UInt8] = [80, 120, 160, 255]) throws -> [UInt8] {
+private func renderGlow(_ stars: [StarGlowPass.Star], background: [UInt8] = [80, 120, 160, 255],
+                        settings: StarGlowSettings = .init()) throws -> [UInt8] {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let queue = try #require(device.makeCommandQueue())
     let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 64, height: 64, mipmapped: false)
@@ -16,7 +17,7 @@ private func renderGlow(_ stars: [StarGlowPass.Star], background: [UInt8] = [80,
         source.replace(region: MTLRegionMake2D(0, 0, 64, 64), mipmapLevel: 0, withBytes: $0.baseAddress!, bytesPerRow: 64 * 4)
     }
     let pass = try StarGlowPass(stars: stars, device: device)
-    pass.update(worldToView: matrix_identity_float4x4, markerSize: 12, viewportHeight: 64)
+    pass.update(worldToView: matrix_identity_float4x4, markerSize: 12, viewportHeight: 64, glow: settings)
     let projection = simd_float4x4([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, -1], [0, 0, -0.01, 0])
     let command = try #require(queue.makeCommandBuffer())
     try pass.encode(source: source, target: target, commandBuffer: command, projection: projection)
@@ -62,4 +63,22 @@ private let coolGlow = StarGlowPass.Star(positionRadius: [0, 0, -10, 4], color: 
     let image = try renderGlow([small, behind])
     let base: [UInt8] = [80, 120, 160, 255]
     #expect(image == (0..<(64 * 64)).flatMap { _ in base })
+}
+
+@Test func glowControlsChangeExtentBrightnessAndFalloff() throws {
+    let background: [UInt8] = [0, 0, 0, 255]
+    let off = try renderGlow([warmGlow], background: background, settings: .init(intensity: 0))
+    #expect(off == (0..<(64 * 64)).flatMap { _ in background })
+
+    let normal = try renderGlow([warmGlow], background: background)
+    let bright = try renderGlow([warmGlow], background: background, settings: .init(intensity: 1))
+    let wide = try renderGlow([warmGlow], background: background, settings: .init(size: 3))
+    let soft = try renderGlow([warmGlow], background: background, settings: .init(bias: 0.25))
+    let tight = try renderGlow([warmGlow], background: background, settings: .init(bias: 4))
+    let centre = (32 * 64 + 32) * 4
+    let wing = (32 * 64 + 35) * 4
+    #expect(bright[centre] > normal[centre])
+    #expect(wide[wing] > normal[wing])
+    #expect(soft[wing] > normal[wing] && normal[wing] > tight[wing])
+    #expect(soft[centre] == tight[centre]) // Bias preserves peak intensity.
 }

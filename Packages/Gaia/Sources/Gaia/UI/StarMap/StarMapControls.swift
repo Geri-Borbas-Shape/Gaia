@@ -8,6 +8,18 @@ struct StarMapControls: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    glowSlider("Glow size", value: $options.glow.size, range: 0.25...4, step: 0.05,
+                               display: "\(options.glow.size.formatted(.number.precision(.fractionLength(2))))×")
+                    glowSlider("Glow intensity", value: $options.glow.intensity, range: 0...1, step: 0.01,
+                               display: options.glow.intensity.formatted(.percent.precision(.fractionLength(0))))
+                    glowSlider("Glow bias", value: $options.glow.bias, range: 0.25...4, step: 0.05,
+                               display: options.glow.bias.formatted(.number.precision(.fractionLength(2))))
+                } header: {
+                    Text("Glow")
+                } footer: {
+                    Text("Changes appear live. Lower bias spreads the glow; higher bias concentrates it.")
+                }
                 Section("Camera") {
                     LabeledContent("Field of view", value: "\(Int(options.fieldOfView))°")
                     Slider(value: $options.fieldOfView, in: 10...80, step: 1) {
@@ -37,10 +49,23 @@ struct StarMapControls: View {
             .navigationTitle("Map Controls")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Reset glow") { options.glow = .init() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    private func glowSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>,
+                            step: Double, display: String) -> some View {
+        VStack(spacing: 4) {
+            LabeledContent(title, value: display)
+                .monospacedDigit()
+            Slider(value: value, in: range, step: step) { Text(title) }
+                .accessibilityValue(display)
         }
     }
 }

@@ -26,6 +26,7 @@ struct StarMapOptions: Equatable {
     var focus = Focus.sun
     var fieldOfView = 50.0
     var markerSize = 5.0
+    var glow = StarGlowSettings()
     var showsMilkyWay = true
     var resetID = 0
     var horizontalOrbit = 0
@@ -36,6 +37,14 @@ struct StarMapOptions: Equatable {
         self = Self()
         resetID = nextID
     }
+}
+
+struct StarGlowSettings: Equatable {
+    /// Scale relative to the original three-radius halo; leaves the core unchanged.
+    var size = 1.0
+    var intensity = 0.16
+    /// Exponent of the halo profile: below one spreads it; above one concentrates it.
+    var bias = 1.0
 }
 
 enum StarMapProjection {

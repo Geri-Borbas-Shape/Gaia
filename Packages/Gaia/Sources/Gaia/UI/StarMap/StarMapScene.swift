@@ -159,7 +159,8 @@ final class StarMapScene: NSObject, MTKViewDelegate {
         guard let view, view.bounds.height > 0 else { return }
         starField?.update(markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height))
         starField?.glowPass.update(worldToView: simd_inverse(camera.transform.matrix),
-                                  markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height))
+                                  markerSize: Float(options.markerSize), viewportHeight: Float(view.bounds.height),
+                                  glow: options.glow)
     }
 
     @objc private func orbit(_ gesture: UIPanGestureRecognizer) {

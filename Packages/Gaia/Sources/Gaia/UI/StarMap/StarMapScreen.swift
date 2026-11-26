@@ -82,6 +82,7 @@ struct StarMapScreen: View {
             .sheet(isPresented: $showsControls) {
                 StarMapControls(options: $options)
                     .presentationDetents([.medium, .large])
+                    .presentationContentInteraction(.scrolls)
             }
             .sheet(item: $selectedStar) { star in
                 StarMapDetail(star: star)
