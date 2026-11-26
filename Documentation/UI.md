@@ -4,7 +4,7 @@
 
 ## Star list
 
-[`StarListScreen`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L4) is the root screen, titled "Nearby Stars".
+[`StarListScreen`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L4) is the root screen of the Catalogue tab, titled "Nearby Stars".
 
 - The list shows `StarListViewModel.stars`, one [`StarRow`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L42) per star.
 - The search field binds to `searchText`, with the prompt "Name or Gaia source ID".
