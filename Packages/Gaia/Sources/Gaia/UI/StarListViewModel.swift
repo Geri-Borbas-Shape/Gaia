@@ -19,9 +19,15 @@ public final class StarListViewModel {
         store.stars(matching: searchText, sortedBy: sort)
     }
 
-    public func load() {
+    /// The map uses the full catalogue, independent of the nearby-list distance filter.
+    public var allStars: [Star] { store.stars }
+    public var catalogueRadius: Int { Int(ceil(store.maximumDistance)) }
+
+    public func load() async {
         do {
-            store = try StarRepository.bundled()
+            store = try await Task.detached(priority: .userInitiated) {
+                try StarRepository.bundled()
+            }.value
             hasFailed = false
         } catch {
             Logger.catalog.error("Catalogue failed to load: \(error, privacy: .public)")

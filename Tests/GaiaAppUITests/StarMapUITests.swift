@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 @MainActor
 final class StarMapUITests: XCTestCase {
@@ -6,14 +7,23 @@ final class StarMapUITests: XCTestCase {
     func testMapControlsAndCatalogueNavigation() {
         let app = XCUIApplication()
         app.launch()
-        XCTAssertTrue(app.staticTexts["315 stars within 10 pc · Sun at the centre"].waitForExistence(timeout: 10))
-        attachScreenshot(of: app, named: "Nearby stars")
+        XCTAssertTrue(app.staticTexts["map-catalogue-summary"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["map-catalogue-summary"].label.contains("50 pc"))
+        XCTAssertFalse(app.staticTexts["Star rendering unavailable"].exists)
+        attachScreenshot(of: app, named: "Expanded star field")
+
+        // Grid controls must remain usable while the Sun is selected.
+        app.buttons["Map controls"].tap()
+        reveal(app.switches["Milky Way wireframe"], in: app)
+        XCTAssertTrue(app.switches["Milky Way wireframe"].isEnabled)
+        app.buttons["Done"].tap()
 
         captureMarker("galactic-context", "begin")
         app.segmentedControls.buttons["Milky Way"].tap()
-        XCTAssertTrue(app.staticTexts["Nearby stars cluster around the Sun at this scale"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Zoom in to resolve individual stars"].waitForExistence(timeout: 3))
         app.buttons["Map controls"].tap()
         XCTAssertTrue(app.navigationBars["Map Controls"].waitForExistence(timeout: 3))
+        reveal(app.sliders["Field of view"], in: app)
         app.sliders["Field of view"].adjust(toNormalizedSliderPosition: 0.7)
         app.buttons["Orbit left"].tap()
         app.buttons["Orbit up"].tap()
@@ -22,15 +32,14 @@ final class StarMapUITests: XCTestCase {
         captureMarker("galactic-context", "end")
         captureMarker("display-controls", "begin")
         app.buttons["Map controls"].tap()
-        app.swipeUp()
+        reveal(app.sliders["Marker size"], in: app)
         app.sliders["Marker size"].adjust(toNormalizedSliderPosition: 0.8)
         attachScreenshot(of: app, named: "Map controls")
-        app.switches["Constant screen size"].tap()
         app.switches["Milky Way wireframe"].tap()
         app.buttons["Done"].tap()
         attachScreenshot(of: app, named: "Wireframe hidden")
         app.buttons["Reset view"].tap()
-        XCTAssertTrue(app.staticTexts["315 stars within 10 pc · Sun at the centre"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["map-catalogue-summary"].waitForExistence(timeout: 3))
         captureMarker("display-controls", "end")
 
         captureMarker("catalogue", "begin")
@@ -38,9 +47,11 @@ final class StarMapUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Proxima Centauri"].waitForExistence(timeout: 3))
         attachScreenshot(of: app, named: "Catalogue")
         app.staticTexts["Proxima Centauri"].tap()
-        XCTAssertTrue(app.staticTexts["Source ID"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Temperature class"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Gaia radius"].exists)
+        attachScreenshot(of: app, named: "Stellar properties")
         app.tabBars.buttons["3D Map"].tap()
-        XCTAssertTrue(app.staticTexts["315 stars within 10 pc · Sun at the centre"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["map-catalogue-summary"].waitForExistence(timeout: 3))
         captureMarker("catalogue", "end")
     }
 
@@ -50,18 +61,77 @@ final class StarMapUITests: XCTestCase {
         let map = app.otherElements["star-map"]
         XCTAssertTrue(map.waitForExistence(timeout: 10))
         captureMarker("orbit-zoom-selection", "begin")
+        attachScreenshot(of: app, named: "Before zoom")
+        map.pinch(withScale: 4, velocity: 1)
+        attachScreenshot(of: app, named: "Small stars revealed")
         map.swipeLeft()
-        map.pinch(withScale: 1.5, velocity: 1)
+        attachScreenshot(of: app, named: "Billboards after orbit")
         app.buttons["Reset view"].tap()
 
         // A point within the rendered nearby-star cloud, away from the Sun marker.
-        let star = map.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.5))
+        let star = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
         star.tap()
-        XCTAssertTrue(app.staticTexts["Source ID"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Temperature class"].waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Star details")
         app.buttons["Done"].tap()
         XCTAssertTrue(map.waitForExistence(timeout: 3))
         captureMarker("orbit-zoom-selection", "end")
+    }
+
+    func testGlowControlsUpdateTheMapWhileSheetIsOpen() throws {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.otherElements["star-map"].waitForExistence(timeout: 10))
+        app.buttons["Map controls"].tap()
+        let size = app.sliders["Glow size"]
+        let intensity = app.sliders["Glow intensity"]
+        let bias = app.sliders["Glow bias"]
+        XCTAssertTrue(bias.waitForExistence(timeout: 3))
+        let defaults = [size, intensity, bias].map { $0.value as? String }
+
+        captureMarker("live-glow-controls", "begin")
+        size.adjust(toNormalizedSliderPosition: 0.6)
+        bias.adjust(toNormalizedSliderPosition: 0)
+        intensity.adjust(toNormalizedSliderPosition: 0)
+        let unlit = try previewBrightness(app.screenshot())
+        attachScreenshot(of: app, named: "Glows off")
+
+        intensity.adjust(toNormalizedSliderPosition: 0.55)
+        let broad = try previewBrightness(app.screenshot())
+        XCTAssertGreaterThan(broad, unlit * 1.1, "The visible map must brighten before dismissing controls")
+        attachScreenshot(of: app, named: "Live glow controls")
+        bias.adjust(toNormalizedSliderPosition: 1)
+        XCTAssertLessThan(try previewBrightness(app.screenshot()), broad)
+        attachScreenshot(of: app, named: "Concentrated glow")
+
+        app.buttons["Reset glow"].tap()
+        XCTAssertEqual([size, intensity, bias].map { $0.value as? String }, defaults)
+        captureMarker("live-glow-controls", "end")
+        app.buttons["Done"].tap()
+    }
+
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<5 where !element.isHittable { app.swipeUp() }
+        XCTAssertTrue(element.isHittable)
+    }
+
+    /// Samples only the exposed star field above the medium sheet, excluding labels and controls.
+    private func previewBrightness(_ screenshot: XCUIScreenshot) throws -> Double {
+        let image = try XCTUnwrap(screenshot.image.cgImage)
+        let region = CGRect(x: Double(image.width) * 0.05, y: Double(image.height) * 0.25,
+                            width: Double(image.width) * 0.9, height: Double(image.height) * 0.15)
+        let crop = try XCTUnwrap(image.cropping(to: region))
+        var pixels = [UInt8](repeating: 0, count: crop.width * crop.height * 4)
+        try pixels.withUnsafeMutableBytes { bytes in
+            let context = try XCTUnwrap(CGContext(data: bytes.baseAddress, width: crop.width, height: crop.height,
+                                                 bitsPerComponent: 8, bytesPerRow: crop.width * 4,
+                                                 space: CGColorSpaceCreateDeviceRGB(),
+                                                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(crop, in: CGRect(x: 0, y: 0, width: crop.width, height: crop.height))
+        }
+        return stride(from: 0, to: pixels.count, by: 4).reduce(0.0) {
+            $0 + Double(pixels[$1]) + Double(pixels[$1 + 1]) + Double(pixels[$1 + 2])
+        }
     }
 
     private func attachScreenshot(of app: XCUIApplication, named name: String) {

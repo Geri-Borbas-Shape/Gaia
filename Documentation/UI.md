@@ -20,30 +20,21 @@ A row shows a colour dot, the title, the G magnitude with 2 decimals, and the di
 
 ### Colour
 
-The dot colour approximates the star's colour from its BP−RP colour index.
+The map and list share a smooth temperature-based palette: cool stars are orange-red, Sun-like stars warm white, and hot stars blue-white. Gaia effective temperature takes priority; BP−RP supplies a rough fallback. Missing temperature and colour render neutral grey.
 
-| BP−RP | Colour |
-|---|---|
-| Below 0.0 | Blue |
-| 0.0 to 0.5 | Blue-white |
-| 0.5 to 0.8 | White |
-| 0.8 to 1.2 | Yellow |
-| 1.2 to 1.8 | Orange |
-| 1.8 and above | Red |
-| Missing | Gray |
-
-> See [`Star.color`](../Packages/Gaia/Sources/Gaia/UI/StarColor.swift#L6-L16)
+See `Model/StarAppearance.swift` for the palette, temperature classes and radius estimates.
 
 ## Star detail
 
-[`StarDetailScreen`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L4) shows one star in three sections, titled with the star's title.
+[`StarDetailScreen`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L4) shows one star in four sections, titled with the star's title.
 
 | Section | Rows |
 |---|---|
+| Star appearance | Approximate temperature class, Gaia radius or estimated radius (solar radii) |
 | [Derived](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L10-L15) | Distance, Distance error, Absolute magnitude, Transverse velocity |
 | [Position](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L16-L21) | Right ascension, Declination, Galactic longitude, Galactic latitude |
 | [Gaia DR3](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L22-L30) | Source ID, Parallax, Proper motion, Magnitude (G), Colour (BP−RP), Temperature, Radial velocity |
 
-Values show 2 decimals, positions and the distance error 4, and the temperature none. A missing value shows as "—".
+Radii show 3 decimals. Other values show 2 decimals, positions and the distance error 4, and the temperature none. A missing value shows as "—".
 
 > See [`StarDetailScreen.row(_:_:unit:digits:)`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L35-L39) and [`StarDetailScreen.UI`](../Packages/Gaia/Sources/Gaia/UI/StarDetailScreen.swift#L45-L49)

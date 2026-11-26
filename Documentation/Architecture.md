@@ -8,7 +8,7 @@ The [3D map](3D.md) lives in `UI/StarMap/`. A SwiftUI screen owns catalogue and 
 
 | Folder | Role | Types |
 |---|---|---|
-| `Model/` | Value types and derived values | `Star` |
+| `Model/` | Value types and derived values | `Star`, `StarAppearance` |
 | `Data/` | Parsing, names, queries | `CatalogParser`, `StarNames`, `StarRepository` |
 | `UI/` | View model and screens | `StarListViewModel`, `StarListScreen`, `StarRow`, `StarDetailScreen` |
 
@@ -16,16 +16,16 @@ Dependencies point one way: `UI` → `Data` → `Model`.
 
 ## Flow
 
-1. [`StarListScreen`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L4) creates a `StarListViewModel` and calls `load()` in its `.task`.
-2. [`StarListViewModel.load()`](../Packages/Gaia/Sources/Gaia/UI/StarListViewModel.swift#L22-L30) asks for [`StarRepository.bundled()`](../Packages/Gaia/Sources/Gaia/Data/StarRepository.swift#L28-L34).
-3. `StarRepository.bundled()` reads `nearby_stars.csv` from the package bundle and hands the text to [`CatalogParser.stars(from:)`](../Packages/Gaia/Sources/Gaia/Data/CatalogParser.swift#L18-L39).
+1. [`StarListScreen`](../Packages/Gaia/Sources/Gaia/UI/StarListScreen.swift#L4) creates a `StarListViewModel` and awaits `load()` in its `.task`.
+2. [`StarListViewModel.load()`](../Packages/Gaia/Sources/Gaia/UI/StarListViewModel.swift#L22-L30) loads off the main thread through [`StarRepository.bundled()`](../Packages/Gaia/Sources/Gaia/Data/StarRepository.swift#L28-L34).
+3. `StarRepository.bundled()` caches one immutable sample. On first access it reads `nearby_stars.csv` from the package bundle and hands the text to [`CatalogParser.stars(from:)`](../Packages/Gaia/Sources/Gaia/Data/CatalogParser.swift#L18-L39).
 4. The list reads [`StarListViewModel.stars`](../Packages/Gaia/Sources/Gaia/UI/StarListViewModel.swift#L18-L20), which queries the store with the current search text and sort order.
 
 ## Model
 
-[`Star`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L4) is an immutable value type. Its `id` is the Gaia DR3 source identifier, an `Int64`.
+[`Star`](../Packages/Gaia/Sources/Gaia/Model/Star.swift#L4) is a value type. Its `id` is the Gaia DR3 source identifier, an `Int64`.
 
-Position, parallax and proper motion are always present. `magnitude`, `colorIndex`, `effectiveTemperature` and `radialVelocity` are optional, because Gaia does not publish them for every source.
+Position, parallax and proper motion are always present. `magnitude`, `colorIndex`, `effectiveTemperature`, `radiusInSolarRadii` and `radialVelocity` are optional, because Gaia does not publish them for every source.
 
 Derived values are computed properties in an extension.
 
@@ -58,3 +58,5 @@ Logging goes through `OSLog`. [`Logger.catalog`](../Packages/Gaia/Sources/Gaia/D
 [`CatalogTests`](../Packages/Gaia/Tests/GaiaTests/CatalogTests.swift) uses Swift Testing and runs against the bundled data, with no mocks.
 
 [`StarMapTests`](../Packages/Gaia/Tests/GaiaTests/StarMapTests.swift) covers coordinates, projection sizing and camera-option reset. [`StarMapUITests`](../Tests/GaiaAppUITests/StarMapUITests.swift) exercises the iOS map gestures, controls, star selection and catalogue navigation through the generated `GaiaApp` scheme.
+
+The map reads `allStars`, independent of the nearby-list filter. `StarSceneRenderer` renders RealityKit's batched core mesh and grid into a texture; `StarGlowPass` screen-blends instanced halo billboards over it without depth testing, then presents in an `MTKView`. `Resources/StarGlow.metal` performs billboarding, projected-size culling and glow shading on the GPU. `StarAppearanceTests` cover the physical-data fallbacks and visibility thresholds. `StarGlowTests` render real Metal textures to verify screen blending and overlapping halos.

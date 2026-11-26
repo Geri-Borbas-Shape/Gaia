@@ -32,7 +32,7 @@ public struct StarListScreen: View {
                 }
             }
             .task {
-                viewModel.load()
+                await viewModel.load()
             }
         }
     }

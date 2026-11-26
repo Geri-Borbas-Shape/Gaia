@@ -20,7 +20,7 @@ import Testing
 }
 
 @Test func cataloguePositionsPreserveDistanceAndHandedness() throws {
-    for star in try CatalogStore.bundled().stars {
+    for star in try StarRepository.bundled().stars {
         let position = star.galacticPositionInParsecs
         let distance = (position * position).sum().squareRoot()
         #expect(abs(distance - star.distanceInParsecs) < 1e-10)
@@ -31,7 +31,7 @@ import Testing
 }
 
 @Test func proximaHasExpectedScenePosition() throws {
-    let proxima = try #require(try CatalogStore.bundled().stars.first)
+    let proxima = try #require(try StarRepository.bundled().stars.first)
     #expect(abs(proxima.scenePosition.x - 0.9027) < 0.001)
     #expect(abs(proxima.scenePosition.y - -0.04357) < 0.001)
     #expect(abs(proxima.scenePosition.z - 0.9372) < 0.001)
@@ -59,10 +59,12 @@ import Testing
     options.focus = .galacticCenter
     options.fieldOfView = 10
     options.showsMilkyWay = false
+    options.glow = .init(size: 4, intensity: 1, bias: 0.25)
     options.reset()
     #expect(options.focus == .sun)
     #expect(options.fieldOfView == 50)
     #expect(options.showsMilkyWay)
+    #expect(options.glow == StarGlowSettings())
     #expect(options.resetID == 1)
     options.reset()
     #expect(options.resetID == 2)

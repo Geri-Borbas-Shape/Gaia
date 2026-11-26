@@ -11,6 +11,7 @@ public struct CatalogParser: Sendable {
     enum Column: String, CaseIterable {
         case source_id, ra, dec, l, b, parallax, parallax_error, pmra, pmdec
         case phot_g_mean_mag, bp_rp, teff_gspphot, radial_velocity
+        case radius_gspphot
     }
 
     public init() {}
@@ -23,7 +24,7 @@ public struct CatalogParser: Sendable {
         // Header.
         let header = Self.fields(of: lines.removeFirst())
         let indices = Dictionary(header.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
-        for column in Column.allCases where indices[column.rawValue] == nil {
+        for column in Column.allCases where column != .radius_gspphot && indices[column.rawValue] == nil {
             throw ParseError.missingColumn(column.rawValue)
         }
 
@@ -53,7 +54,8 @@ extension CatalogParser {
         }
 
         func double(_ column: Column) -> Double? {
-            string(column).flatMap(Double.init)
+            guard let value = string(column).flatMap(Double.init), value.isFinite else { return nil }
+            return value
         }
     }
 
@@ -89,7 +91,8 @@ extension CatalogParser {
             magnitude: row.double(.phot_g_mean_mag),
             colorIndex: row.double(.bp_rp),
             effectiveTemperature: row.double(.teff_gspphot),
-            radialVelocity: row.double(.radial_velocity)
+            radialVelocity: row.double(.radial_velocity),
+            radiusInSolarRadii: row.double(.radius_gspphot)
         )
     }
 }
